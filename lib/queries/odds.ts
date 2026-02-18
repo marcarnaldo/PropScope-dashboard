@@ -1,4 +1,3 @@
-/* Querying the odds_snapshot table*/
 "use server";
 
 import { pool } from "../db";

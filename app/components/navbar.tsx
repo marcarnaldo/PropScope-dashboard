@@ -13,10 +13,9 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-zinc-700/50 bg-zinc-900/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-18">
+    <nav className="top-0 z-50 border-b border-zinc-700/50 bg-zinc-900/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
         <Link href="/" className="flex items-center gap-2 text-zinc-100 font-bold text-sm tracking-tight hover:text-white transition-colors">
-          <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">ODDS</span>
           <span>PropScope</span>
         </Link>
 

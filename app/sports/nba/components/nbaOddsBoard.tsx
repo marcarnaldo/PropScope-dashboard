@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
 import { getLatestOdds } from "@/lib/queries/odds";
 import PropsTable from "./propsTable";
+import { useOddsPolling } from "@/lib/useOddsPolling";
 
 interface Fixture {
   fixture_id: number;
@@ -13,7 +14,7 @@ interface Fixture {
   status: string;
 }
 
-interface NormalizedProp {
+export interface NormalizedProp {
   line: number;
   siaOdds: { over: number; under: number };
   fdOdds: { over: number; under: number };
@@ -38,9 +39,22 @@ export interface PropRow {
 }
 
 export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
-  const updatedFixtureId = useOddsSSE();
+  // const updatedFixtureId = useOddsSSE();
+  // const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
+
+  // useEffect(() => {
+  //   fixtures.forEach(async (fixture) => {
+  //     const odds = await getLatestOdds(fixture.fixture_id);
+  //     if (odds) {
+  //       setOddsMap((prev) => ({ ...prev, [fixture.fixture_id]: odds }));
+  //     }
+  //   });
+  // }, [fixtures]);
+
+  const tick = useOddsPolling(10000000); // poll every 60s
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
 
+  // Initial load + refetch on every tick
   useEffect(() => {
     fixtures.forEach(async (fixture) => {
       const odds = await getLatestOdds(fixture.fixture_id);
@@ -48,30 +62,40 @@ export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
         setOddsMap((prev) => ({ ...prev, [fixture.fixture_id]: odds }));
       }
     });
-  }, [fixtures]);
+  }, [fixtures, tick]);
 
-  useEffect(() => {
-    if (!updatedFixtureId) return;
-    async function refetch() {
-      const odds = await getLatestOdds(updatedFixtureId!);
-      if (odds) {
-        setOddsMap((prev) => ({ ...prev, [updatedFixtureId!]: odds }));
-      }
-    }
-    refetch();
-  }, [updatedFixtureId]);
+  // useEffect(() => {
+  //   if (!updatedFixtureId) return;
+  //   async function refetch() {
+  //     const odds = await getLatestOdds(updatedFixtureId!);
+  //     if (odds) {
+  //       setOddsMap((prev) => ({ ...prev, [updatedFixtureId!]: odds }));
+  //     }
+  //   }
+  //   refetch();
+  // }, [updatedFixtureId]);
 
   const allProps: PropRow[] = [];
-  fixtures.forEach((fixture) => {
+  fixtures.forEach((fixture: Fixture) => {
+    // Grab the all odds entry that corresponds with this fixture_id
     const oddsRow = oddsMap[fixture.fixture_id];
-    const oddsData: NormalizedOdds | null = oddsRow
-      ? typeof oddsRow.odds_data === "string"
-        ? JSON.parse(oddsRow.odds_data)
-        : oddsRow.odds_data
-      : null;
 
+    // Nested ternary
+    const oddsData: NormalizedOdds | null = oddsRow
+      ? // Check if the odds_data is a string
+        typeof oddsRow.odds_data === "string"
+        ? // If it is a string, we must parse it to JSON
+          JSON.parse(oddsRow.odds_data)
+        : // Otherwise, just set oddsRow to odds_data
+          oddsRow.odds_data
+      : // If not a string, null
+        null;
+
+    // Improve this later to return a message if needed
+    // If there is no oddsData, do nothing for now
     if (!oddsData) return;
 
+    // Push each prop to save it. We will pass it to the PropsTable to render the info in the UI.
     for (const [player, props] of Object.entries(oddsData.props)) {
       for (const [propType, prop] of Object.entries(props)) {
         allProps.push({
@@ -87,6 +111,7 @@ export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
     }
   });
 
+  // No props yet
   if (allProps.length === 0) {
     return (
       <div className="text-center py-24">
@@ -98,5 +123,6 @@ export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
     );
   }
 
+  // Using the data in allProps, we pass it into PropsTable to render the info
   return <PropsTable rows={allProps} />;
 }

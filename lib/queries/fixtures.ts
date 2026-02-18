@@ -17,14 +17,27 @@ export async function getAllFixtures() {
 }
 
 // I will have a section for still open games and this will be the one being highlighted in the main page of nba
+// export async function getTodaysOpenFixtures() {
+//   const result = await pool.query(
+//     /* SQL */
+//     `
+//     SELECT fixture_id, home_team, away_team, start_date, status
+//     FROM fixtures
+//     WHERE start_date::date = CURRENT_DATE 2026-02-19 16:40:00.000 -0800
+//     AND status = 'open'
+//     ORDER BY start_date ASC`,
+//   );
+
+//   return result.rows;
+// }
+
 export async function getTodaysOpenFixtures() {
   const result = await pool.query(
     /* SQL */
     `
     SELECT fixture_id, home_team, away_team, start_date, status
     FROM fixtures
-    WHERE start_date::date = CURRENT_DATE
-    AND status = 'open'
+    WHERE status = 'open'
     ORDER BY start_date ASC`,
   );
 

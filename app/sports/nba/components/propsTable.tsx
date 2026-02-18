@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-
-interface NormalizedProp {
-  line: number;
-  siaOdds: { over: number; under: number };
-  fdOdds: { over: number; under: number };
-  siaOddsNoVig: { over: number; under: number };
-  fdOddsNoVig: { over: number; under: number };
-}
+import { NormalizedProp } from "./nbaOddsBoard";
 
 export interface PropRow {
   player: string;
@@ -35,41 +28,19 @@ const PROP_LABELS: Record<string, string> = {
   rebounds_assists: "Reb + Ast",
 };
 
-type SortKey = "player" | "matchup" | "prop" | "overGap" | "underGap";
-type SortDir = "asc" | "desc";
+// Only sortable columns
+type SortKey =
+  | "player"
+  | "matchup"
+  | "prop"
+  | "overGap"
+  | "underGap"
+  | "siaOver"
+  | "siaUnder"
+  | "fdOver"
+  | "fdUnder";
 
-function fmtOdds(n: number) {
-  return n > 0 ? `+${n}` : `${n}`;
-}
-
-function fmtPct(n: number) {
-  return `${(n * 100).toFixed(1)}%`;
-}
-
-function gapType(gap: number): "positive" | "negative" | "neutral" {
-  if (gap > 0.001) return "positive";
-  if (gap < -0.001) return "negative";
-  return "neutral";
-}
-
-function gapDisplay(gap: number) {
-  return `${gap > 0 ? "+" : ""}${(gap * 100).toFixed(1)}%`;
-}
-
-function getSortValue(row: PropRow, key: SortKey): string | number {
-  switch (key) {
-    case "player":
-      return row.player.toLowerCase();
-    case "matchup":
-      return `${row.awayTeam} ${row.homeTeam}`.toLowerCase();
-    case "prop":
-      return row.propType;
-    case "overGap":
-      return row.prop.fdOddsNoVig.over - row.prop.siaOddsNoVig.over;
-    case "underGap":
-      return row.prop.fdOddsNoVig.under - row.prop.siaOddsNoVig.under;
-  }
-}
+type SortDirection = "asc" | "desc";
 
 const gapTextColor = {
   positive: "text-emerald-400",
@@ -83,43 +54,60 @@ const gapBgColor = {
   neutral: "",
 };
 
-export default function PropsTable({ rows }: PropsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("overGap");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+function gapDisplay(gap: number) {
+  return `${gap > 0 ? "+" : ""}${(gap * 100).toFixed(1)}%`;
+}
 
+function fmtPct(n: number) {
+  return `${(n * 100).toFixed(2)}%`;
+}
+
+export default function PropsTable({ rows }: PropsTableProps) {
+  // A useState for when the user sort the columns
+  // On initial load, the data is sorted by the matchup
+  const [sortKey, setSortKey] = useState<SortKey>("matchup");
+  // On initial load, the data is sorted descendingly
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // useMemo will allow the sorting to be quick because it caches values
+  // This is great because we are just sorting already existing values. No reason to pull from db again
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
       const aVal = getSortValue(a, sortKey);
       const bVal = getSortValue(b, sortKey);
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [rows, sortKey, sortDir]);
+  }, [rows, sortKey, sortDirection]); // Dependencies
 
   function handleSort(key: SortKey) {
+    // check if what we are sorting is currently the one in sortKey since users can sort the same key
     if (sortKey === key) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
+      // Set the sortKey to the one the user wants to sort
       setSortKey(key);
-      setSortDir("desc");
+      // The sort will default on desc if it's the first time it is clicked
+      setSortDirection("desc");
     }
   }
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-auto max-h-[85vh] [&::-webkit-scrollbar]{display:none} [-ms-overflow-style:none] [scrollbar-width:none]">
       <table
-        className="w-full"
+        className="w-full min-w-225"
         style={{ borderSpacing: "0 10px", borderCollapse: "separate" }}
       >
-        <thead>
+        <thead className="sticky top-0 z-10">
           <tr>
             {/* Left columns */}
             <SortableTh
               label="Player"
               sortKey="player"
               current={sortKey}
-              dir={sortDir}
+              dir={sortDirection}
               onSort={handleSort}
               className="text-left pl-5 pr-4"
             />
@@ -127,7 +115,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
               label="Matchup"
               sortKey="matchup"
               current={sortKey}
-              dir={sortDir}
+              dir={sortDirection}
               onSort={handleSort}
               className="text-left pr-4"
             />
@@ -135,34 +123,62 @@ export default function PropsTable({ rows }: PropsTableProps) {
               label="Prop"
               sortKey="prop"
               current={sortKey}
-              dir={sortDir}
+              dir={sortDirection}
               onSort={handleSort}
               className="text-left pr-4"
             />
-            <th className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider pr-4 pb-2">
+            <th className="text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider pr-4 pb-2 bg-zinc-900">
               Line
             </th>
 
             {/* Over group */}
-            <BookTh bookName="SportsInteraction" sub="No-vig" side="over" />
-            <BookTh bookName="FanDuel" sub="No-vig" side="over" accent />
+            <SortableTh
+              label="SIA Over"
+              sortKey="siaOver"
+              current={sortKey}
+              dir={sortDirection}
+              onSort={handleSort}
+              className="text-center px-3"
+            />
+            <SortableTh
+              label="FD Over"
+              sortKey="fdOver"
+              current={sortKey}
+              dir={sortDirection}
+              onSort={handleSort}
+              className="text-center px-3"
+            />
             <SortableTh
               label="Over Gap"
               sortKey="overGap"
               current={sortKey}
-              dir={sortDir}
+              dir={sortDirection}
               onSort={handleSort}
               className="text-center px-2"
             />
 
             {/* Under group */}
-            <BookTh bookName="SportsInteraction" sub="No-vig" side="under" />
-            <BookTh bookName="FanDuel" sub="No-vig" side="under" accent />
+            <SortableTh
+              label="SIA Under"
+              sortKey="siaUnder"
+              current={sortKey}
+              dir={sortDirection}
+              onSort={handleSort}
+              className="text-center px-3"
+            />
+            <SortableTh
+              label="FD Under"
+              sortKey="fdUnder"
+              current={sortKey}
+              dir={sortDirection}
+              onSort={handleSort}
+              className="text-center px-3"
+            />
             <SortableTh
               label="Under Gap"
               sortKey="underGap"
               current={sortKey}
-              dir={sortDir}
+              dir={sortDirection}
               onSort={handleSort}
               className="text-center pl-2 pr-5"
             />
@@ -193,14 +209,13 @@ export default function PropsTable({ rows }: PropsTableProps) {
                 {/* Matchup */}
                 <td className="pr-4 py-5 bg-[#13151b] border-y border-zinc-800 group-hover:border-zinc-700/70 transition-colors">
                   <span className="text-sm text-zinc-400 whitespace-nowrap">
-                    {row.awayTeam}{" "}
-                    <span className="text-zinc-600">@</span>{" "}
+                    {row.awayTeam} <span className="text-zinc-600">@</span>{" "}
                     {row.homeTeam}
                   </span>
                 </td>
 
                 {/* Prop */}
-                <td className="pr-4 py-5 bg-[#13151b] border-y border-zinc-800 group-hover:border-zinc-700/70 transition-colors">
+                <td className="pr-10 py-5 bg-[#13151b] border-y border-zinc-800 group-hover:border-zinc-700/70 transition-colors">
                   <span className="text-sm font-medium text-zinc-300 whitespace-nowrap">
                     {PROP_LABELS[row.propType] ?? row.propType}
                   </span>
@@ -208,7 +223,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
 
                 {/* Line */}
                 <td className="pr-4 py-5 bg-[#13151b] border-y border-zinc-800 group-hover:border-zinc-700/70 transition-colors">
-                  <span className="text-lg font-bold text-zinc-50 tabular-nums">
+                  <span className="text-zinc-50 tabular-nums">
                     {row.prop.line}
                   </span>
                 </td>
@@ -269,7 +284,11 @@ export default function PropsTable({ rows }: PropsTableProps) {
   );
 }
 
-/* ---- Odds table cell ---- */
+function gapType(gap: number): "positive" | "negative" | "neutral" {
+  if (gap > 0.001) return "positive";
+  if (gap < -0.001) return "negative";
+  return "neutral";
+}
 
 function OddsTd({
   pct,
@@ -289,11 +308,31 @@ function OddsTd({
       >
         {fmtPct(pct)}
       </p>
-      <p className="text-xs text-zinc-600 tabular-nums mt-0.5">
-        {fmtOdds(odds)}
-      </p>
     </td>
   );
+}
+
+function getSortValue(row: PropRow, key: SortKey): string | number {
+  switch (key) {
+    case "player":
+      return row.player.toLowerCase();
+    case "matchup":
+      return `${row.awayTeam} ${row.homeTeam}`.toLowerCase();
+    case "prop":
+      return row.propType;
+    case "overGap":
+      return row.prop.fdOddsNoVig.over - row.prop.siaOddsNoVig.over;
+    case "underGap":
+      return row.prop.fdOddsNoVig.under - row.prop.siaOddsNoVig.under;
+    case "siaOver":
+      return row.prop.siaOddsNoVig.over;
+    case "siaUnder":
+      return row.prop.siaOddsNoVig.under;
+    case "fdOver":
+      return row.prop.fdOddsNoVig.over;
+    case "fdUnder":
+      return row.prop.fdOddsNoVig.under;
+  }
 }
 
 /* ---- Book column header ---- */
@@ -315,7 +354,7 @@ function BookTh({
       : "text-red-400/70 border-red-400/20 bg-red-400/5";
 
   return (
-    <th className="px-3 pb-2 text-center align-bottom">
+    <th className="px-3 pb-2 text-center align-bottom bg-zinc-900">
       <span
         className={`inline-block text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border mb-1 ${tagColor}`}
       >
@@ -346,7 +385,7 @@ function SortableTh({
   label: string;
   sortKey: SortKey;
   current: SortKey;
-  dir: SortDir;
+  dir: SortDirection;
   onSort: (key: SortKey) => void;
   className?: string;
 }) {
@@ -354,7 +393,7 @@ function SortableTh({
   return (
     <th
       onClick={() => onSort(sortKey)}
-      className={`pb-2 cursor-pointer select-none transition-colors whitespace-nowrap ${className}`}
+      className={`bg-zinc-900 pb-2 cursor-pointer select-none transition-colors whitespace-nowrap ${className}`}
     >
       <span
         className={`text-xs font-semibold uppercase tracking-wider ${
