@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react";
 
 export function useOddsSSE() {
-  // Create state to store the latest fixtureId received from SSE
-  const [lastUpdate, setLastUpdate] = useState<number | null>(null); // It starts as null
+  // Store the ids that are sent by the sse to an array
+  const [updatedFixtureIds, setUpdatedFixtureIds] = useState<number[]>([]);
 
   useEffect(() => {
     // Create a new Server-Sent Events connection to this endpoint
-    const eventSource = new EventSource("/api/sse/odds"); // This is how next.js work, any folder under the app becomes a route
+    const eventSource = new EventSource("/api/sse/odds");
 
     eventSource.addEventListener("odds-update", (event) => {
       // Convert the incoming JSON string into a JavaScript object
-      const data = JSON.parse(event.data); // Example of the parsed JSON {data: 19023231}
-      setLastUpdate(data.fixtureId); // we set the lastUpdated to the fixture that just got updated. Meaning, the fixture that we scraped the odds from
+      const data = JSON.parse(event.data);
+      setUpdatedFixtureIds(data.fixtureIds); // we set the lastUpdatedFixtureIds to the fixture that just got updated. Meaning, the fixture that we scraped the odds from
     });
 
     // If there is an error with the connection
@@ -29,7 +29,7 @@ export function useOddsSSE() {
       eventSource.close();
     };
   }, []); // Empty dependency array means this effect runs only once (on mount) because useEffect always runs on mount
-
-  // Return the latest fixtureId so components using this hook can access it
-  return lastUpdate;
+  
+  // Return the latest array of fixtureIds so components using this hook can access it
+  return updatedFixtureIds;
 }

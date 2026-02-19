@@ -56,3 +56,15 @@ export async function getTodaysCloseFixtures() {
   );
   return result.rows;
 }
+
+export async function getFixtureById(fixtureId: number) {
+  const result = await pool.query(
+    /* SQL */
+    `
+    SELECT fixture_id, home_team, away_team, start_date, status
+    FROM fixtures
+    WHERE fixture_id = $1`,
+    [fixtureId],
+  );
+  return result.rows[0] ?? null;
+}

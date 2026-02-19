@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { NormalizedProp } from "./nbaOddsBoard";
+import { useRouter } from "next/navigation";
+import { NormalizedProp } from "./oddsBoard";
 
 export interface PropRow {
   player: string;
@@ -68,6 +69,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("matchup");
   // On initial load, the data is sorted descendingly
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const router = useRouter();
 
   // useMemo will allow the sorting to be quick because it caches values
   // This is great because we are just sorting already existing values. No reason to pull from db again
@@ -95,7 +97,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
   }
 
   return (
-    <div className="w-full overflow-auto max-h-[85vh] [&::-webkit-scrollbar]{display:none} [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="w-full overflow-auto max-h-[85vh] [&::-webkit-scrollbar]{display:none} [-ms-overflow-style:none] [scrollbar-width:none] max-w-400 mx-auto px-4">
       <table
         className="w-full min-w-225"
         style={{ borderSpacing: "0 10px", borderCollapse: "separate" }}
@@ -133,7 +135,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
 
             {/* Over group */}
             <SortableTh
-              label="SIA Over"
+              label="Sports Int."
               sortKey="siaOver"
               current={sortKey}
               dir={sortDirection}
@@ -141,7 +143,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
               className="text-center px-3"
             />
             <SortableTh
-              label="FD Over"
+              label="Fanduel"
               sortKey="fdOver"
               current={sortKey}
               dir={sortDirection}
@@ -159,7 +161,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
 
             {/* Under group */}
             <SortableTh
-              label="SIA Under"
+              label="Sports Int."
               sortKey="siaUnder"
               current={sortKey}
               dir={sortDirection}
@@ -167,7 +169,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
               className="text-center px-3"
             />
             <SortableTh
-              label="FD Under"
+              label="Fanduel"
               sortKey="fdUnder"
               current={sortKey}
               dir={sortDirection}
@@ -180,13 +182,14 @@ export default function PropsTable({ rows }: PropsTableProps) {
               current={sortKey}
               dir={sortDirection}
               onSort={handleSort}
-              className="text-center pl-2 pr-5"
+              className="text-center pl-2"
             />
           </tr>
         </thead>
 
         <tbody>
           {sorted.map((row) => {
+            const rowKey = `${row.fixtureId}-${row.player}-${row.propType}`;
             const overGap =
               row.prop.fdOddsNoVig.over - row.prop.siaOddsNoVig.over;
             const underGap =
@@ -196,8 +199,13 @@ export default function PropsTable({ rows }: PropsTableProps) {
 
             return (
               <tr
-                key={`${row.fixtureId}-${row.player}-${row.propType}`}
-                className="group"
+                key={rowKey}
+                onClick={() =>
+                  router.push(
+                    `/sports/nba/props/${row.fixtureId}/${encodeURIComponent(row.player)}?prop=${row.propType}`,
+                  )
+                }
+                className="group cursor-pointer"
               >
                 {/* Player */}
                 <td className="pl-5 pr-4 py-5 bg-[#13151b] border-y border-l border-zinc-800 rounded-l-xl group-hover:border-zinc-700/70 transition-colors">
@@ -266,7 +274,7 @@ export default function PropsTable({ rows }: PropsTableProps) {
                 />
 
                 {/* Under Gap */}
-                <td className="pl-2 pr-5 py-5 bg-[#13151b] border-y border-r border-zinc-800 rounded-r-xl group-hover:border-zinc-700/70 transition-colors">
+                <td className="pl-2 py-5 bg-[#13151b] border-y border-zinc-800 group-hover:border-zinc-700/70 transition-colors">
                   <div className="flex justify-center">
                     <span
                       className={`text-sm font-bold tabular-nums px-2.5 py-1 rounded-lg ${gapTextColor[underType]} ${gapBgColor[underType]}`}
@@ -275,6 +283,8 @@ export default function PropsTable({ rows }: PropsTableProps) {
                     </span>
                   </div>
                 </td>
+
+                <td className="pl-2 py-5 bg-[#13151b] border-y border-r border-zinc-800 rounded-r-xl group-hover:border-zinc-700/70 transition-colors"></td>
               </tr>
             );
           })}
@@ -335,45 +345,6 @@ function getSortValue(row: PropRow, key: SortKey): string | number {
   }
 }
 
-/* ---- Book column header ---- */
-
-function BookTh({
-  bookName,
-  sub,
-  side,
-  accent = false,
-}: {
-  bookName: string;
-  sub: string;
-  side: "over" | "under";
-  accent?: boolean;
-}) {
-  const tagColor =
-    side === "over"
-      ? "text-emerald-500/70 border-emerald-500/20 bg-emerald-500/5"
-      : "text-red-400/70 border-red-400/20 bg-red-400/5";
-
-  return (
-    <th className="px-3 pb-2 text-center align-bottom bg-zinc-900">
-      <span
-        className={`inline-block text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border mb-1 ${tagColor}`}
-      >
-        {side}
-      </span>
-      <p
-        className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
-          accent ? "text-blue-400/70" : "text-zinc-500"
-        }`}
-      >
-        {bookName}
-      </p>
-      <p className="text-[10px] text-zinc-600 mt-0.5">{sub}</p>
-    </th>
-  );
-}
-
-/* ---- Sortable header cell ---- */
-
 function SortableTh({
   label,
   sortKey,
@@ -402,13 +373,22 @@ function SortableTh({
       >
         {label}
       </span>
-      {isActive ? (
-        <span className="ml-1 text-blue-400 text-[10px]">
-          {dir === "asc" ? "▲" : "▼"}
+      <span className="inline-flex flex-col ml-1 -space-y-1 align-middle leading-none gap-y-1">
+        <span
+          className={`text-[10px] ${
+            isActive && dir === "asc" ? "text-blue-400" : "text-zinc-700"
+          }`}
+        >
+          ▲
         </span>
-      ) : (
-        <span className="ml-1 text-zinc-700 text-[10px]">▼</span>
-      )}
+        <span
+          className={`text-[10px] ${
+            isActive && dir === "desc" ? "text-blue-400" : "text-zinc-700"
+          }`}
+        >
+          ▼
+        </span>
+      </span>
     </th>
   );
 }

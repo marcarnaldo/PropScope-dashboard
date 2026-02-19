@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
 import { getLatestOdds } from "@/lib/queries/odds";
 import PropsTable from "./propsTable";
-import { useOddsPolling } from "@/lib/useOddsPolling";
+import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
 
 interface Fixture {
   fixture_id: number;
@@ -22,7 +22,7 @@ export interface NormalizedProp {
   fdOddsNoVig: { over: number; under: number };
 }
 
-interface NormalizedOdds {
+export interface NormalizedOdds {
   homeTeam: string;
   awayTeam: string;
   props: Record<string, Record<string, NormalizedProp>>;
@@ -39,41 +39,45 @@ export interface PropRow {
 }
 
 export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
-  // const updatedFixtureId = useOddsSSE();
-  // const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
-
-  // useEffect(() => {
-  //   fixtures.forEach(async (fixture) => {
-  //     const odds = await getLatestOdds(fixture.fixture_id);
-  //     if (odds) {
-  //       setOddsMap((prev) => ({ ...prev, [fixture.fixture_id]: odds }));
-  //     }
-  //   });
-  // }, [fixtures]);
-
-  const tick = useOddsPolling(10000000); // poll every 60s
+  const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
 
-  // Initial load + refetch on every tick
   useEffect(() => {
-    fixtures.forEach(async (fixture) => {
-      const odds = await getLatestOdds(fixture.fixture_id);
-      if (odds) {
-        setOddsMap((prev) => ({ ...prev, [fixture.fixture_id]: odds }));
-      }
-    });
-  }, [fixtures, tick]);
+    const idsToFetch =
+      updatedFixtureIds.length > 0
+        ? updatedFixtureIds
+        : fixtures.map((f) => f.fixture_id);
 
-  // useEffect(() => {
-  //   if (!updatedFixtureId) return;
-  //   async function refetch() {
-  //     const odds = await getLatestOdds(updatedFixtureId!);
-  //     if (odds) {
-  //       setOddsMap((prev) => ({ ...prev, [updatedFixtureId!]: odds }));
-  //     }
-  //   }
-  //   refetch();
-  // }, [updatedFixtureId]);
+    if (idsToFetch.length === 0) return;
+
+    async function fetchOdds() {
+      const results = await Promise.all(
+        idsToFetch.map(async (id) => {
+          // Check if there are updateFixtureIds sent by SSE
+          if (updatedFixtureIds.length > 0) {
+            // If there is, we just add to the cache by getting the latest from db
+            const latestOdds = await getLatestOdds(id);
+            if (latestOdds) addSnapshot(id, latestOdds);
+          }
+
+          // When getting the odds, we always look in the cache
+          const odds = await getCachedOdds(id);
+          const latestOdds = odds?.[odds.length - 1] ?? null;
+          return { id, latestOdds };
+        }),
+      );
+
+      setOddsMap((prev) => {
+        const next = { ...prev };
+        for (const { id, latestOdds } of results) {
+          if (latestOdds) next[id] = latestOdds;
+        }
+        return next;
+      });
+    }
+
+    fetchOdds();
+  }, [fixtures, updatedFixtureIds]);
 
   const allProps: PropRow[] = [];
   fixtures.forEach((fixture: Fixture) => {

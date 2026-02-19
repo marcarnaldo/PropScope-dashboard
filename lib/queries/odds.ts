@@ -3,7 +3,7 @@
 import { pool } from "../db";
 
 export async function getLatestOdds(fixtureId: number) {
-    const result = await pool.query(
+  const result = await pool.query(
     /* SQL */
     `SELECT odds_data, snapshot_time
      FROM odds_snapshots
@@ -14,4 +14,16 @@ export async function getLatestOdds(fixtureId: number) {
   );
 
   return result.rows[0] ?? null;
+}
+
+export async function getOddsHistory(fixtureId: number) {
+  const result = await pool.query(
+    /* SQL */
+    `SELECT odds_data, snapshot_time
+     FROM odds_snapshots
+     WHERE fixture_id = $1
+     ORDER BY snapshot_time ASC`,
+    [fixtureId],
+  );
+  return result.rows;
 }
