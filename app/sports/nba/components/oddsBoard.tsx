@@ -5,6 +5,7 @@ import { useOddsSSE } from "@/lib/useOddsSSE";
 import { getLatestOdds } from "@/lib/queries/odds";
 import PropsTable from "./propsTable";
 import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
+import GameStrip from "./gameStrip";
 
 interface Fixture {
   fixture_id: number;
@@ -115,18 +116,19 @@ export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
     }
   });
 
-  // No props yet
-  if (allProps.length === 0) {
-    return (
-      <div className="text-center py-24">
-        <p className="text-zinc-400 text-lg">Waiting for odds...</p>
-        <p className="text-zinc-500 text-sm mt-1">
-          Props will appear as games approach
-        </p>
-      </div>
-    );
-  }
-
-  // Using the data in allProps, we pass it into PropsTable to render the info
-  return <PropsTable rows={allProps} />;
+  return (
+    <>
+      <GameStrip fixtures={fixtures} />
+      {allProps.length === 0 ? (
+        <div className="text-center py-24">
+          <p className="text-zinc-400 text-lg">Waiting for odds...</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            Props will appear as games approach
+          </p>
+        </div>
+      ) : (
+        <PropsTable rows={allProps} />
+      )}
+    </>
+  );
 }

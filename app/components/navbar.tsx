@@ -16,7 +16,7 @@ export default function Navbar() {
     <nav className="top-0 z-50 border-b border-zinc-700/50 bg-zinc-900/80 backdrop-blur-md">
       <div className="max-w-400 mx-auto px-4 flex items-center justify-between h-14">
         <Link href="/" className="flex items-center gap-2 text-zinc-100 font-bold text-sm tracking-tight hover:text-white transition-colors">
-          <img src="/propscope.svg" alt="PropScope" className="h-35" />
+          <img src="/propscope.svg" alt="PropScope" className="h-50" />
         </Link>
 
         <div className="flex items-center gap-1">

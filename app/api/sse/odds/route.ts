@@ -1,10 +1,18 @@
 const BACKEND_SSE_URL = process.env.BACKEND_URL + "/sse/odds";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const abortController = new AbortController();
+
+  // When the client disconnects, abort the backend fetch
+  request.signal.addEventListener("abort", () => {
+    abortController.abort();
+  });
+
   const response = await fetch(BACKEND_SSE_URL, {
     headers: {
       Accept: "text/event-stream",
     },
+    signal: abortController.signal,
   });
 
   if (!response.ok || !response.body) {
