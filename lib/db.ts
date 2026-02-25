@@ -1,4 +1,8 @@
-/* Connecting to db */
+/**
+ * Global reference used to persist the connection pool across hot reloads
+ * in development. Without this, each reload would create a new pool,
+ * eventually exhausting available database connections.
+ */
 import { Pool } from 'pg';
 
 const globalForDb = globalThis as unknown as { pool: Pool | undefined };

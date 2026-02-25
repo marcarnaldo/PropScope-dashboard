@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+/**
+ * Custom React hook that establishes a Server-Sent Events (SSE) connection
+ * to the odds endpoint. Listens for "odds-update" events and returns
+ * the latest array of fixture IDs that have been updated.
+ *
+ * The SSE connection is created once on mount and cleaned up on unmount
+ * to prevent memory leaks.
+ *
+ * @returns {number[]} The most recently updated fixture IDs from the SSE stream.
+ */
 export function useOddsSSE() {
   // Store the ids that are sent by the sse to an array
   const [updatedFixtureIds, setUpdatedFixtureIds] = useState<number[]>([]);
@@ -29,7 +39,7 @@ export function useOddsSSE() {
       eventSource.close();
     };
   }, []); // Empty dependency array means this effect runs only once (on mount) because useEffect always runs on mount
-  
+
   // Return the latest array of fixtureIds so components using this hook can access it
   return updatedFixtureIds;
 }

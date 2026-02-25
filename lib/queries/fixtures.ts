@@ -1,10 +1,15 @@
-/* Querying fixtures table*/
-
 "use server";
 
 import { pool } from "../db";
 
-// Just in case I want to have a pagination to look at all the games open or close. Probably irrelevant. Might delete later.
+/**
+ * Fetches all fixtures from the database, regardless of status.
+ * Results are sorted by start date in ascending order.
+ *
+ * Potential use: pagination to browse all games (open or closed).
+ *
+ * @returns {Promise<Array<{fixture_id: number, home_team: string, away_team: string, start_date: string, status: string}>>}
+ */
 export async function getAllFixtures() {
   const result = await pool.query(
     /* SQL */
@@ -16,21 +21,12 @@ export async function getAllFixtures() {
   return result.rows;
 }
 
-// I will have a section for still open games and this will be the one being highlighted in the main page of nba
-// export async function getTodaysOpenFixtures() {
-//   const result = await pool.query(
-//     /* SQL */
-//     `
-//     SELECT fixture_id, home_team, away_team, start_date, status
-//     FROM fixtures
-//     WHERE start_date::date = CURRENT_DATE 2026-02-19 16:40:00.000 -0800
-//     AND status = 'open'
-//     ORDER BY start_date ASC`,
-//   );
-
-//   return result.rows;
-// }
-
+/**
+ * Fetches all fixtures with an 'open' status, sorted by start date ascending.
+ * These are games that haven't finished yet and are highlighted on the main NBA page.
+ *
+ * @returns {Promise<Array<{fixture_id: number, home_team: string, away_team: string, start_date: string, status: string}>>}
+ */
 export async function getTodaysOpenFixtures() {
   const result = await pool.query(
     /* SQL */
@@ -44,7 +40,12 @@ export async function getTodaysOpenFixtures() {
   return result.rows;
 }
 
-// I will have a section for closed games in the event I want to look at games that are finished
+/**
+ * Fetches all fixtures with a 'close' status, sorted by start date ascending.
+ * Used for viewing finished games.
+ *
+ * @returns {Promise<Array<{fixture_id: number, home_team: string, away_team: string, start_date: string, status: string}>>}
+ */
 export async function getTodaysCloseFixtures() {
   const result = await pool.query(
     /* SQL */
@@ -54,9 +55,17 @@ export async function getTodaysCloseFixtures() {
     WHERE status = 'close'
     ORDER BY start_date ASC`,
   );
+
   return result.rows;
 }
 
+/**
+ * Fetches a single fixture by its ID.
+ *
+ * @param {number} fixtureId - The unique identifier of the fixture.
+ * @returns {Promise<{fixture_id: number, home_team: string, away_team: string, start_date: string, status: string} | null>}
+ *          The fixture row, or null if not found.
+ */
 export async function getFixtureById(fixtureId: number) {
   const result = await pool.query(
     /* SQL */
@@ -66,5 +75,6 @@ export async function getFixtureById(fixtureId: number) {
     WHERE fixture_id = $1`,
     [fixtureId],
   );
+
   return result.rows[0] ?? null;
 }
