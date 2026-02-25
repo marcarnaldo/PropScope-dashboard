@@ -110,7 +110,7 @@ export default function OddsChart({
           </span>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={160} className="sm:h-62.5!">
+      <ResponsiveContainer width="100%" height={160} className="sm:h-40.5!">
         <LineChart
           data={data}
           margin={{ top: 4, right: 4, bottom: 0, left: 4 }}

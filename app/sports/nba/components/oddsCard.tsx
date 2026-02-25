@@ -19,7 +19,7 @@ export const PROP_LABELS: Record<string, string> = {
   points: "PTS",
   rebounds: "REB",
   assists: "AST",
-  threes: "3PM",
+  threes: "3PTS",
   points_rebounds_assists: "P+R+A",
   points_assists: "P+A",
   points_rebounds: "P+R",
