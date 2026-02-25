@@ -6,6 +6,7 @@ import { getLatestOdds } from "@/lib/queries/odds";
 import PropsTable from "./propsTable";
 import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
 import GameStrip from "./gameStrip";
+import OddsCard from "./oddsCard";
 
 interface Fixture {
   fixture_id: number;
@@ -39,7 +40,7 @@ export interface PropRow {
   fixtureId: number;
 }
 
-export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
+export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
 
@@ -117,18 +118,16 @@ export default function NbaOddsBoard({ fixtures }: { fixtures: Fixture[] }) {
   });
 
   return (
-    <>
+    <div className="sm:max-w-400 sm:mx-auto sm:px-4">
       <GameStrip fixtures={fixtures} />
-      {allProps.length === 0 ? (
-        <div className="text-center py-24">
-          <p className="text-zinc-400 text-lg">Waiting for odds...</p>
-          <p className="text-zinc-500 text-sm mt-1">
-            Props will appear as games approach
-          </p>
-        </div>
-      ) : (
-        <PropsTable rows={allProps} />
-      )}
-    </>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+        {allProps.map((row) => (
+          <OddsCard
+            key={`${row.fixtureId}-${row.player}-${row.propType}`}
+            row={row}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

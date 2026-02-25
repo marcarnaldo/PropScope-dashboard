@@ -19,9 +19,8 @@ export default function GameStrip({ fixtures }: { fixtures: Fixture[] }) {
     const el = scrollRef.current;
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   };
-
   useEffect(() => {
     checkScroll();
     const el = scrollRef.current;
@@ -37,11 +36,19 @@ export default function GameStrip({ fixtures }: { fixtures: Fixture[] }) {
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction === "left" ? -250 : 250, behavior: "smooth" });
+    const remaining =
+      direction === "left"
+        ? el.scrollLeft
+        : el.scrollWidth - el.clientWidth - el.scrollLeft;
+    const distance = Math.min(300, remaining);
+    el.scrollBy({
+      left: direction === "left" ? -distance : distance,
+      behavior: "smooth",
+    });
   };
 
   return (
-    <div className="mx-auto px-4 relative flex items-center gap-2 mb-6">
+    <div className="w-full mx-auto relative flex items-center mb-6">
       {/* Left arrow */}
       <button
         onClick={() => scroll("left")}
@@ -52,7 +59,16 @@ export default function GameStrip({ fixtures }: { fixtures: Fixture[] }) {
         }`}
         disabled={!canScrollLeft}
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M10 4l-4 4 4 4" />
         </svg>
       </button>
@@ -79,7 +95,8 @@ export default function GameStrip({ fixtures }: { fixtures: Fixture[] }) {
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
               </span>
               <span className="text-xs text-zinc-300 whitespace-nowrap">
-                {game.away_team} <span className="text-zinc-600">@</span> {game.home_team}
+                {game.away_team} <span className="text-zinc-600">@</span>{" "}
+                {game.home_team}
               </span>
               <span className="text-[10px] text-zinc-600">{time}</span>
             </div>
@@ -98,7 +115,16 @@ export default function GameStrip({ fixtures }: { fixtures: Fixture[] }) {
         }`}
         disabled={!canScrollRight}
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M6 4l4 4-4 4" />
         </svg>
       </button>
