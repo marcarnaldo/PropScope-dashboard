@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
 import { getLatestOdds } from "@/lib/queries/odds";
-import PropsTable from "./propsTable";
 import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
-import GameStrip from "./gameStrip";
 import OddsCard from "./oddsCard";
+import FilterSheet from "./filter";
 
 interface Fixture {
   fixture_id: number;
@@ -38,6 +37,16 @@ export interface PropRow {
   awayTeam: string;
   startDate: string;
   fixtureId: number;
+}
+
+export interface Filters {
+  team: string;
+  propType: string;
+  minGap: number;
+  direction: "" | "over" | "under";
+  minFdNoVig: number;
+  sortBy: "" | "gap" | "fdNoVig";
+  sortDir: "asc" | "desc";
 }
 
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
@@ -117,11 +126,121 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     }
   });
 
+  const [filters, setFilters] = useState<Filters>(() => {
+    if (typeof window === "undefined")
+      return {
+        team: "",
+        propType: "",
+        minGap: 0,
+        direction: "",
+        minFdNoVig: 0,
+        sortBy: "",
+        sortDir: "desc",
+      };
+
+    // Get all the filters that's been set so that when I go back to nba page, the user will still see the filtered cards
+    const saved = sessionStorage.getItem("propscope-filters");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          team: "",
+          propType: "",
+          minGap: 0,
+          direction: "",
+          minFdNoVig: 0,
+          sortBy: "",
+          sortDir: "desc",
+        };
+  });
+  // Save to sessionStorage whenever filters change
+  useEffect(() => {
+    sessionStorage.setItem("propscope-filters", JSON.stringify(filters));
+  }, [filters]);
+
+  const filtered = allProps.filter((row) => {
+    // Skip all rows that are not specified in the filter
+    if (
+      filters.team &&
+      row.homeTeam !== filters.team &&
+      row.awayTeam !== filters.team
+    )
+      return false;
+    if (filters.propType && row.propType !== filters.propType) return false;
+
+    // Calculate all necessary calculations
+    const dir = filters.direction;
+    const overGap =
+      (row.prop.fdOddsNoVig.over - row.prop.siaOddsNoVig.over) * 100;
+    const underGap =
+      (row.prop.fdOddsNoVig.under - row.prop.siaOddsNoVig.under) * 100;
+    const gap =
+      dir === "over"
+        ? overGap
+        : dir === "under"
+          ? underGap
+          : Math.max(overGap, underGap);
+    const noVig =
+      dir === "over"
+        ? row.prop.fdOddsNoVig.over * 100
+        : dir === "under"
+          ? row.prop.fdOddsNoVig.under * 100
+          : 0;
+
+    // Skip all rows that are not within the parameters set
+    if (filters.minGap && gap < filters.minGap) return false;
+    if (dir && filters.minFdNoVig && noVig < filters.minFdNoVig) return false;
+
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (!filters.sortBy) return 0;
+
+    const dir = filters.direction || "over";
+    const isOver = dir === "over";
+
+    let aVal: number | string = 0;
+    let bVal: number | string = 0;
+
+    switch (filters.sortBy) {
+      case "gap":
+        aVal = isOver
+          ? a.prop.fdOddsNoVig.over - a.prop.siaOddsNoVig.over
+          : a.prop.fdOddsNoVig.under - a.prop.siaOddsNoVig.under;
+        bVal = isOver
+          ? b.prop.fdOddsNoVig.over - b.prop.siaOddsNoVig.over
+          : b.prop.fdOddsNoVig.under - b.prop.siaOddsNoVig.under;
+        break;
+      case "fdNoVig":
+        aVal = isOver ? a.prop.fdOddsNoVig.over : a.prop.fdOddsNoVig.under;
+        bVal = isOver ? b.prop.fdOddsNoVig.over : b.prop.fdOddsNoVig.under;
+        break;
+    }
+
+    if (aVal < bVal) return filters.sortDir === "asc" ? -1 : 1;
+    if (aVal > bVal) return filters.sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Get all team names that are playing today
+  const teams = [
+    ...new Set(allProps.flatMap((row) => [row.homeTeam, row.awayTeam])),
+  ];
+
+  // get all prop types
+  const propTypes = [...new Set(allProps.map((row) => row.propType))];
+
   return (
     <div className="sm:max-w-400 sm:mx-auto sm:px-4">
-      <GameStrip fixtures={fixtures} />
+      {/* <GameStrip fixtures={fixtures} /> */}
+      <FilterSheet
+        filters={filters}
+        onFilterChange={setFilters}
+        teams={teams}
+        propTypes={propTypes}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-        {allProps.map((row) => (
+        {sorted.map((row) => (
           <OddsCard
             key={`${row.fixtureId}-${row.player}-${row.propType}`}
             row={row}

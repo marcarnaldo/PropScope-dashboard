@@ -138,7 +138,7 @@ export default function LandingPage() {
               8 markets tracked for every player available on both books.
             </p>
             <p className="text-base text-zinc-400 leading-relaxed">
-              Odds are scraped every 5 minutes starting 2 hours before tip-off
+              Odds are scraped every 5 minutes starting 1 hour before tip-off
               and saved as snapshots so you can track how lines move over time.
             </p>
           </div>

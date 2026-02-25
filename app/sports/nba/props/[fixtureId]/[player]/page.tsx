@@ -53,7 +53,7 @@ export default async function PlayerPropsPage({
   const playerProp = oddsData?.props?.[decodedPlayer]?.[prop];
 
   return (
-    <main className="min-h-screen bg-zinc-900 text-zinc-300">
+    <main className="min-h-screen bg-zinc-900 text-zinc-300 px-2">
       <div className="max-w-300 px-2 mx-auto">
         {/* Header */}
         <div className="pt-2 sm:p-5 mb-6">
