@@ -3,6 +3,7 @@ import { getFixtureById } from "@/lib/queries/fixtures";
 import { PROP_LABELS } from "../../../components/oddsCard";
 import { NormalizedProp } from "../../../components/oddsBoard";
 import OddsChart from "../../../components/oddsChart";
+export const dynamic = "force-dynamic";
 
 function fmtOdds(n: number) {
   return n > 0 ? `+${n}` : `${n}`;

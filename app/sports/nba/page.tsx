@@ -3,7 +3,7 @@ import {
   getTodaysOpenFixtures,
 } from "@/lib/queries/fixtures";
 import NbaOddsSpace from "./components/oddsBoard";
-
+export const dynamic = "force-dynamic";
 export default async function NbaPage() {
   const openFixtures = await getTodaysOpenFixtures();
 
