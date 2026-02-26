@@ -50,6 +50,16 @@ export interface Filters {
 }
 
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
+  if (fixtures.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-zinc-500 text-sm">
+          No games available right now. Check back closer to game time.
+        </p>
+      </div>
+    );
+  }
+
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
 

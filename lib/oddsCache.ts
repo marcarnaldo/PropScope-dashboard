@@ -44,17 +44,3 @@ export async function getCachedOdds(fixtureId: number) {
   cache.set(fixtureId, history);
   return history;
 }
-
-/**
- * Removes entries from the cache for any fixture IDs that are no longer
- * active. Prevents the cache from growing indefinitely as old games close.
- *
- * @param activeFixtureIds - The IDs of fixtures that should remain cached.
- */
-export function pruneCache(activeFixtureIds: number[]) {
-  for (const key of cache.keys()) {
-    if (!activeFixtureIds.includes(key)) {
-      cache.delete(key);
-    }
-  }
-}
