@@ -50,16 +50,6 @@ export interface Filters {
 }
 
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
-  if (fixtures.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-zinc-500 text-sm">
-          No games available right now. Check back closer to game time.
-        </p>
-      </div>
-    );
-  }
-
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
 
@@ -274,15 +264,54 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         teams={teams}
         propTypes={propTypes}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-        {sorted.slice(0, visibleCount).map((row) => (
-          <OddsCard
-            key={`${row.fixtureId}-${row.player}-${row.propType}`}
-            row={row}
-          />
-        ))}
-      </div>
-      {visibleCount < sorted.length && <div ref={loaderRef} className="h-10" />}
+      {sorted.length === 0 ? (
+        <div className="py-12">
+          <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
+            No props available yet. Check back at a closer time.
+          </p>
+          <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
+            Today's Schedule
+          </p>
+          <div className="space-y-1.5">
+            {fixtures.map((f) => (
+              <div
+                key={f.fixture_id}
+                className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 flex justify-between items-center"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-zinc-300 font-medium">
+                    {f.away_team}
+                  </span>
+                  <span className="text-zinc-600 text-xs">@</span>
+                  <span className="text-zinc-300 font-medium">
+                    {f.home_team}
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-zinc-500 bg-zinc-800/50 px-2.5 py-1 rounded-lg">
+                  {new Date(f.start_date).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {sorted.slice(0, visibleCount).map((row) => (
+              <OddsCard
+                key={`${row.fixtureId}-${row.player}-${row.propType}`}
+                row={row}
+              />
+            ))}
+          </div>
+          {visibleCount < sorted.length && (
+            <div ref={loaderRef} className="h-10" />
+          )}
+        </>
+      )}
     </div>
   );
 }

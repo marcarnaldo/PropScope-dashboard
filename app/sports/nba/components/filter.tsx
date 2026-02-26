@@ -297,14 +297,6 @@ export default function FilterSheet({
           )}
         </div>
       </div>
-
-      {/* Reset — desktop only (mobile has its own in sheet header) */}
-      <button
-        onClick={() => onFilterChange(DEFAULT_FILTERS)}
-        className="hidden ml-auto text-[11px] text-zinc-600 hover:text-red-400 transition-colors whitespace-nowrap font-semibold uppercase"
-      >
-        Reset
-      </button>
     </>
   );
 
@@ -384,7 +376,7 @@ export default function FilterSheet({
       )}
 
       {/* Desktop: inline filter bar */}
-      <div className="hidden sm:flex items-center gap-3 flex-wrap mb-4 p-3">
+      <div className="hidden sm:flex items-center gap-3 flex-wrap mb-4 p-3 border-b border-zinc-800/60 pb-4">
         {filterControls}
       </div>
     </>
