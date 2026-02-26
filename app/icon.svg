@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="154" height="154" viewBox="0 0 154 154" xmlns="http://www.w3.org/2000/svg">
+
+  <g transform="translate(12,12) scale(0.85)">
+
+    <!-- Outer housing -->
+    <circle cx="77" cy="77" r="72"
+            fill="none" stroke="#FFFFFF" stroke-width="10"/>
+
+    <!-- Inner depth ring -->
+    <circle cx="77" cy="77" r="48"
+            fill="none" stroke="#2563EB" stroke-width="6"/>
+
+    <!-- Subtle inner glass ring -->
+    <circle cx="77" cy="77" r="28"
+            fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.6"/>
+
+    <!-- Center precision core -->
+    <circle cx="77" cy="77" r="8"
+            fill="#2563EB"/>
+
+  </g>
+
+</svg>
