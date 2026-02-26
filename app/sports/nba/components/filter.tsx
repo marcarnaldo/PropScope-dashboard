@@ -29,6 +29,16 @@ export default function FilterSheet({
 }: FilterSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    setTouchStart(e.touches[0].clientY);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const diff = e.changedTouches[0].clientY - touchStart;
+    if (diff > 10) setIsOpen(false);
+  }
 
   const activeCount = [
     filters.team,
@@ -101,7 +111,7 @@ export default function FilterSheet({
       {/* Divider — desktop only */}
       <div className="hidden sm:block w-px h-6 bg-zinc-800" />
       <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-widest text-zinc-600 self-center">
-        Prop Type:
+        Prop:
       </span>
       {/* Prop Type */}
       <div className="w-full sm:w-auto">
@@ -269,7 +279,7 @@ export default function FilterSheet({
                   : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              {s === "" ? "None" : s === "gap" ? "Gap" : "FD %"}
+              {s === "" ? "None" : s === "gap" ? "Gap" : "Fanduel %"}
             </button>
           ))}
           {filters.sortBy && (
@@ -291,7 +301,7 @@ export default function FilterSheet({
       {/* Reset — desktop only (mobile has its own in sheet header) */}
       <button
         onClick={() => onFilterChange(DEFAULT_FILTERS)}
-        className="hidden sm:block ml-auto text-[11px] text-zinc-600 hover:text-red-400 transition-colors whitespace-nowrap font-semibold uppercase"
+        className="hidden ml-auto text-[11px] text-zinc-600 hover:text-red-400 transition-colors whitespace-nowrap font-semibold uppercase"
       >
         Reset
       </button>
@@ -336,6 +346,8 @@ export default function FilterSheet({
           <div
             className="relative w-full max-w-md bg-[#111318] border-t border-zinc-800/60 rounded-t-2xl max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <div
               className="flex justify-center pt-3 pb-2 cursor-pointer"

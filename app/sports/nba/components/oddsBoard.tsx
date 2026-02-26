@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
 import { getLatestOdds } from "@/lib/queries/odds";
 import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
@@ -230,9 +230,34 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   // get all prop types
   const propTypes = [...new Set(allProps.map((row) => row.propType))];
 
+  const [visibleCount, setVisibleCount] = useState(12);
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = loaderRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 12, sorted.length));
+        }
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(element);
+    // Since a new observer gets created whenever sorted.length changes, we must disconnect the current observer for it to not stack
+    return () => observer.disconnect();
+  }, [sorted.length]);
+
+  // Revert the visible count to the initial amount whenever filter changes so that filters can be quick
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [filters]);
+
   return (
     <div className="sm:max-w-400 sm:mx-auto sm:px-4">
-      {/* <GameStrip fixtures={fixtures} /> */}
       <FilterSheet
         filters={filters}
         onFilterChange={setFilters}
@@ -240,13 +265,14 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         propTypes={propTypes}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-        {sorted.map((row) => (
+        {sorted.slice(0, visibleCount).map((row) => (
           <OddsCard
             key={`${row.fixtureId}-${row.player}-${row.propType}`}
             row={row}
           />
         ))}
       </div>
+      {visibleCount < sorted.length && <div ref={loaderRef} className="h-10" />}
     </div>
   );
 }
