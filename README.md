@@ -1,4 +1,4 @@
-# [(PropScope)](https://propscope.ca/)
+# [PropScope](https://propscope.ca/)
 
 A real-time NBA player prop odds comparison dashboard. Displays no-vig probabilities from Sports Interaction against FanDuel's sharp line, tracking line movements over time.
 
