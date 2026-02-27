@@ -52,7 +52,7 @@ export interface Filters {
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     const idsToFetch =
@@ -86,7 +86,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         }
         return next;
       });
-      setIsLoading(false);
+      setHasFetched(true);
     }
 
     fetchOdds();
@@ -260,7 +260,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
 
   return (
     <div className="sm:max-w-400 sm:mx-auto sm:px-4">
-      {isLoading ? (
+      {!hasFetched && fixtures.length > 0 ? (
         <div className="flex justify-center py-20">
           <div className="w-6 h-6 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
         </div>
