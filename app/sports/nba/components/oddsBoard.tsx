@@ -52,6 +52,7 @@ export interface Filters {
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const idsToFetch =
@@ -85,6 +86,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         }
         return next;
       });
+      setIsLoading(false);
     }
 
     fetchOdds();
@@ -258,47 +260,59 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
 
   return (
     <div className="sm:max-w-400 sm:mx-auto sm:px-4">
-      <FilterSheet
-        filters={filters}
-        onFilterChange={setFilters}
-        teams={teams}
-        propTypes={propTypes}
-      />
-      {sorted.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-6 h-6 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+        </div>
+      ) : allProps.length === 0 ? (
         <div className="py-12">
           <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
             No props available yet. Check back at a closer time.
           </p>
-          <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
-            Today's Schedule
-          </p>
-          <div className="space-y-1.5">
-            {fixtures.map((f) => (
-              <div
-                key={f.fixture_id}
-                className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 flex justify-between items-center"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-zinc-300 font-medium">
-                    {f.away_team}
-                  </span>
-                  <span className="text-zinc-600 text-xs">@</span>
-                  <span className="text-zinc-300 font-medium">
-                    {f.home_team}
-                  </span>
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-500 bg-zinc-800/50 px-2.5 py-1 rounded-lg">
-                  {new Date(f.start_date).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
+          {fixtures.length > 0 ? (
+            <>
+              <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
+                Today's Schedule
+              </p>
+              <div className="space-y-1.5">
+                {fixtures.map((f) => (
+                  <div
+                    key={f.fixture_id}
+                    className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 flex justify-between items-center min-w-0"
+                  >
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <span className="text-zinc-300 font-medium truncate">
+                        {f.away_team}
+                      </span>
+                      <span className="text-zinc-600 text-xs shrink-0">@</span>
+                      <span className="text-zinc-300 font-medium truncate">
+                        {f.home_team}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-zinc-500 bg-zinc-800/50 px-2.5 py-1 rounded-lg shrink-0 ml-3">
+                      {new Date(f.start_date).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <p className="text-zinc-600 text-sm text-center">
+              No games scheduled.
+            </p>
+          )}
         </div>
       ) : (
         <>
+          <FilterSheet
+            filters={filters}
+            onFilterChange={setFilters}
+            teams={teams}
+            propTypes={propTypes}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {sorted.slice(0, visibleCount).map((row) => (
               <OddsCard

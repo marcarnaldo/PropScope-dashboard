@@ -59,7 +59,7 @@ export default function FilterSheet({
           onClick={() => setTeamOpen(!teamOpen)}
           className="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-2 bg-white/3 border border-zinc-800 rounded-xl sm:rounded-lg px-3 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-zinc-300 sm:text-zinc-400 hover:text-zinc-300 transition-colors"
         >
-          <span>{filters.team || "All Teams"}</span>
+          <span className="truncate">{filters.team || "All Teams"}</span>
           <svg
             width="10"
             height="6"
