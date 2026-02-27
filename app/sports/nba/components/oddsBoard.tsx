@@ -280,9 +280,9 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
                 {fixtures.map((f) => (
                   <div
                     key={f.fixture_id}
-                    className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 flex justify-between items-center min-w-0"
+                    className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 min-w-0 sm:flex sm:justify-between sm:items-center"
                   >
-                    <div className="flex items-center gap-2 text-sm min-w-0">
+                    <div className="flex items-center gap-2 text-sm">
                       <span className="text-zinc-300 font-medium truncate">
                         {f.away_team}
                       </span>
@@ -291,20 +291,25 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
                         {f.home_team}
                       </span>
                     </div>
-                    <span className="text-[11px] font-semibold text-zinc-500 bg-zinc-800/50 px-2.5 py-1 rounded-lg shrink-0 ml-3">
+                    <p className="text-[11px] text-zinc-500 mt-1.5 sm:mt-0 sm:font-semibold sm:bg-zinc-800/50 sm:px-2.5 sm:py-1 sm:rounded-lg sm:shrink-0 sm:ml-3">
+                      {new Date(f.start_date).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {" · "}
                       {new Date(f.start_date).toLocaleTimeString("en-US", {
                         hour: "numeric",
                         minute: "2-digit",
                       })}
-                    </span>
+                    </p>
                   </div>
                 ))}
               </div>
             </>
           ) : (
             <p className="text-zinc-600 text-sm text-center">
-              No games detected right now. If there are games, check back at a
-              later time.
+              No games detected right now. If there are games, check back at a later time.
             </p>
           )}
         </div>
