@@ -55,6 +55,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
+    const isSSEUpdate = updatedFixtureIds.length > 0;
     const idsToFetch =
       updatedFixtureIds.length > 0
         ? updatedFixtureIds
@@ -65,17 +66,18 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     async function fetchOdds() {
       const results = await Promise.all(
         idsToFetch.map(async (id) => {
-          // Check if there are updateFixtureIds sent by SSE
-          if (updatedFixtureIds.length > 0) {
-            // If there is, we just add to the cache by getting the latest from db
+          if (isSSEUpdate) {
+            // If there is an SSE update, get the latest odds from db
             const latestOdds = await getLatestOdds(id);
+            // save the new odds to cache
             if (latestOdds) addSnapshot(id, latestOdds);
+            return { id, latestOdds };
+          } else {
+            // We hit the cache if there are no new updates. This is good when renavigating to oddsboard over and over again
+            const odds = await getCachedOdds(id);
+            const latestOdds = odds?.[odds.length - 1] ?? null;
+            return { id, latestOdds };
           }
-
-          // When getting the odds, we always look in the cache
-          const odds = await getCachedOdds(id);
-          const latestOdds = odds?.[odds.length - 1] ?? null;
-          return { id, latestOdds };
         }),
       );
 
@@ -301,7 +303,8 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
             </>
           ) : (
             <p className="text-zinc-600 text-sm text-center">
-              No games scheduled.
+              No games detected right now. If there are games, check back at a
+              later time.
             </p>
           )}
         </div>

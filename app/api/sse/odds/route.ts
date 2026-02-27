@@ -1,3 +1,4 @@
+export const runtime = "edge";
 const BACKEND_SSE_URL = process.env.BACKEND_URL + "/sse/odds";
 
 /**
