@@ -1,4 +1,3 @@
-import { getCachedOdds } from "@/lib/oddsCache";
 import { useEffect, useState } from "react";
 import {
   Line,
@@ -26,7 +25,8 @@ export default function GapChart({
 
   useEffect(() => {
     async function load() {
-      const snapshots = await getCachedOdds(fixtureId);
+      const res = await fetch(`/api/odds/history/${fixtureId}`);
+      const snapshots = await res.json();
       if (!snapshots) return;
 
       const points: { time: string; overGap: number; underGap: number }[] = [];

@@ -9,7 +9,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { getCachedOdds } from "@/lib/oddsCache";
 
 export default function OddsChart({
   fixtureId,
@@ -32,7 +31,8 @@ export default function OddsChart({
 
   useEffect(() => {
     async function loadData() {
-      const snapshots = await getCachedOdds(fixtureId);
+      const res = await fetch(`/api/odds/history/${fixtureId}`);
+      const snapshots = await res.json();
       if (!snapshots) return;
 
       const chartData: {

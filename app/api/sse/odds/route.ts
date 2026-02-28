@@ -1,5 +1,5 @@
-export const runtime = "edge";
 const BACKEND_SSE_URL = process.env.BACKEND_URL + "/sse/odds";
+const KEEPALIVE_INTERVAL_MS = 30_000; // 30 seconds
 
 /**
  * SSE proxy route that forwards the odds event stream from the backend
@@ -29,7 +29,44 @@ export async function GET(request: Request) {
     return new Response("Failed to connect to SSE backend", { status: 502 });
   }
 
-  return new Response(response.body, {
+  const backendReader = response.body.getReader();
+  const encoder = new TextEncoder();
+
+  // Sends a message to the browser every 30 seconds just to make sure that the SSE connection won't get shut down when idle for too long
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Send keep-alive comments on an interval so Railway doesn't time out
+      const keepAlive = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(": keepalive\n\n"));
+        } catch {
+          clearInterval(keepAlive);
+        }
+      }, KEEPALIVE_INTERVAL_MS);
+
+      try {
+        while (true) {
+          const { done, value } = await backendReader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+        controller.close();
+      } catch (err) {
+        // Client disconnected or backend dropped — close gracefully
+        controller.close();
+      } finally {
+        clearInterval(keepAlive);
+        backendReader.releaseLock();
+      }
+    },
+
+    cancel() {
+      abortController.abort();
+      backendReader.cancel();
+    },
+  });
+
+  return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",

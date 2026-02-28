@@ -208,7 +208,7 @@ function OddsComparison({ prop }: { prop: NormalizedProp }) {
         </div>
         <div className="hidden sm:grid grid-cols-2">
           <span className="text-center text-sm font-bold text-blue-400 tabular-nums">
-            {fmtOdds(prop.fdOddsNoVig.under)}
+            {fmtPct(prop.fdOddsNoVig.under)}
           </span>
           <span className="text-center text-sm font-semibold text-zinc-600 tabular-nums">
             {fmtOdds(prop.fdOdds.under)}

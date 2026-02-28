@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
-import { getLatestOdds } from "@/lib/queries/odds";
-import { addSnapshot, getCachedOdds } from "@/lib/oddsCache";
 import OddsCard from "./oddsCard";
 import FilterSheet from "./filter";
 
@@ -68,13 +66,13 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         idsToFetch.map(async (id) => {
           if (isSSEUpdate) {
             // If there is an SSE update, get the latest odds from db
-            const latestOdds = await getLatestOdds(id);
-            // save the new odds to cache
-            if (latestOdds) addSnapshot(id, latestOdds);
+            const res = await fetch(`/api/odds/latest/${id}`, { cache: "no-store" });
+            const latestOdds = await res.json();
             return { id, latestOdds };
           } else {
             // We hit the cache if there are no new updates. This is good when renavigating to oddsboard over and over again
-            const odds = await getCachedOdds(id);
+            const res = await fetch(`/api/odds/history/${id}`);
+            const odds = await res.json();
             const latestOdds = odds?.[odds.length - 1] ?? null;
             return { id, latestOdds };
           }
@@ -269,7 +267,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
       ) : allProps.length === 0 ? (
         <div className="py-12">
           <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
-            No props available yet. Check back at a closer time.
+            Props aren't available yet, they usually appear about an hour before tip-off.
           </p>
           {fixtures.length > 0 ? (
             <>
@@ -309,7 +307,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
             </>
           ) : (
             <p className="text-zinc-600 text-sm text-center">
-              No games detected right now. If there are games, check back at a later time.
+              No games available right now. Check back later.
             </p>
           )}
         </div>
