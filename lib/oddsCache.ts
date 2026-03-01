@@ -36,10 +36,10 @@ export function addSnapshot(fixtureId: number, oddsSnapshot: OddsSnapshotRow) {
  * @returns The complete snapshot history for this fixture.
  */
 export async function getCachedOdds(fixtureId: number) {
-  if (cache.has(fixtureId)) {
-    return cache.get(fixtureId);
+  const cached = cache.get(fixtureId);
+  if (cached && cached.length > 0) {
+    return cached;
   }
-
   const history = await getOddsHistory(fixtureId);
   cache.set(fixtureId, history);
   return history;
