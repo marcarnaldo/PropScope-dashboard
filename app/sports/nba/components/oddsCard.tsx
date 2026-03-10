@@ -2,8 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { NormalizedProp } from "./oddsBoard";
-import { Cardo } from "next/font/google";
-import GapChart from "./gapChart";
 
 export interface PropRow {
   player: string;
@@ -34,22 +32,9 @@ export function gapDisplay(gap: number): string {
   return `${gap > 0 ? "+" : ""}${(gap * 100).toFixed(1)}%`;
 }
 
-function gapType(gap: number): "positive" | "negative" | "neutral" {
-  if (gap > 0.001) return "positive";
-  if (gap < -0.001) return "negative";
-  return "neutral";
-}
-
-const gapStyles = {
-  positive: "text-emerald-400 bg-emerald-500/10",
-  negative: "text-red-400 bg-red-500/10",
-  neutral: "text-zinc-500",
-};
-
 export default function OddsCard({ row }: { row: PropRow }) {
   const router = useRouter();
-  const { player, propType, prop, homeTeam, awayTeam, startDate, fixtureId } =
-    row;
+  const { player, propType, prop, fixtureId } = row;
 
   return (
     <div className="bg-[#13151b] border border-zinc-800/70 rounded-xl w-full p-4">
@@ -57,41 +42,51 @@ export default function OddsCard({ row }: { row: PropRow }) {
         className="cursor-pointer"
         onClick={() =>
           router.push(
-            `/sports/nba/props/${row.fixtureId}/${encodeURIComponent(row.player)}?prop=${row.propType}`,
+            `/sports/nba/props/${fixtureId}/${encodeURIComponent(player)}?prop=${propType}`,
           )
         }
       >
-        {/* Header */}
+        {/* Header — player name + prop label (no line in header) */}
         <div className="flex items-center justify-between gap-2">
-          <p className="font-bold text-zinc-100 truncate">{player}</p>
+          <p className="font-bold text-zinc-100 truncate text-md">{player}</p>
           <div className="shrink-0 border border-zinc-700/50 rounded-xl px-4 py-2.5 bg-zinc-800/30 text-center min-w-14">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider leading-none">
+            <p className="text-xs sm:text-sm font-semibold text-zinc-500 uppercase tracking-wider leading-none">
               {PROP_LABELS[propType] ?? propType}
-            </p>
-            <p className="text-xl font-extrabold text-zinc-100 leading-tight mt-1">
-              {prop.line}
             </p>
           </div>
         </div>
+
         <OddsComparison prop={prop} />
       </div>
-
-      {/* <GapChart fixtureId={fixtureId} player={player} propType={propType} /> */}
     </div>
   );
 }
 
 function OddsComparison({ prop }: { prop: NormalizedProp }) {
-  const overGap = prop.fdOddsNoVig.over - prop.siaOddsNoVig.over;
-  const underGap = prop.fdOddsNoVig.under - prop.siaOddsNoVig.under;
+  const hasDifferentLines = prop.siaLine !== prop.fdLine;
+  const edge = prop.edge;
+
+  // Calculate fair values
+  // When edge exists (different lines), use edge fair probs
+  // When lines are the same, fair = FD no-vig
+  const fairOver = edge ? edge.fairProbOver : prop.fdOddsNoVig.over;
+  const fairUnder = edge ? edge.fairProbUnder : prop.fdOddsNoVig.under;
+
+  // Gap is always: fair value - SIA
+  const overGap = fairOver - prop.siaOddsNoVig.over;
+  const underGap = fairUnder - prop.siaOddsNoVig.under;
+
   const bestSide =
-    overGap >= underGap ? "over" : underGap > overGap ? "under" : "none";
+    overGap >= underGap ? "over" : "under";
 
   return (
     <div className="mt-4">
       {/* Column headers */}
-      <div className="grid grid-cols-[36px_1fr_1fr]">
+      <div className="grid grid-cols-[36px_0.7fr_1fr_1fr]">
         <div />
+        <span className="text-center text-sm font-bold text-zinc-500 uppercase tracking-widest">
+          Line
+        </span>
         <span
           className={`text-center text-sm font-bold text-emerald-400 uppercase tracking-widest ${bestSide === "under" ? "opacity-40" : ""}`}
         >
@@ -104,10 +99,13 @@ function OddsComparison({ prop }: { prop: NormalizedProp }) {
         </span>
       </div>
 
-      {/* SIA */}
-      <div className="grid grid-cols-[36px_1fr_1fr] py-1.5">
+      {/* SIA row */}
+      <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-1.5">
         <span className="text-sm text-zinc-600 font-semibold self-center">
           SIA
+        </span>
+        <span className="text-center text-base font-semibold text-zinc-300 tabular-nums font-mono">
+          {prop.siaLine}
         </span>
         <span
           className={`text-center text-base font-semibold tabular-nums font-mono ${bestSide === "under" ? "text-zinc-500" : "text-zinc-300"}`}
@@ -121,10 +119,13 @@ function OddsComparison({ prop }: { prop: NormalizedProp }) {
         </span>
       </div>
 
-      {/* FD */}
-      <div className="grid grid-cols-[36px_1fr_1fr] py-1.5">
+      {/* FD row */}
+      <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-1.5">
         <span className="text-sm text-zinc-600 font-semibold self-center">
           FD
+        </span>
+        <span className="text-center text-base font-bold text-blue-400 tabular-nums font-mono">
+          {prop.fdLine}
         </span>
         <span
           className={`text-center text-base font-bold tabular-nums font-mono ${bestSide === "under" ? "text-blue-500/50" : "text-blue-400"}`}
@@ -138,11 +139,34 @@ function OddsComparison({ prop }: { prop: NormalizedProp }) {
         </span>
       </div>
 
-      {/* Gap */}
-      <div className="grid grid-cols-[36px_1fr_1fr] py-2 border-t border-white/4">
+      {/* Fair row — only when lines differ */}
+      {hasDifferentLines && edge && (
+        <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-1.5">
+          <span className="text-sm text-zinc-600 font-semibold self-center">
+            Fair
+          </span>
+          <span className="text-center text-base font-bold text-blue-400/60 tabular-nums font-mono">
+            {prop.siaLine}
+          </span>
+          <span
+            className={`text-center text-base font-bold tabular-nums font-mono ${bestSide === "under" ? "text-blue-500/30" : "text-blue-400/60"}`}
+          >
+            {fmtPct(fairOver)}
+          </span>
+          <span
+            className={`text-center text-base font-bold tabular-nums font-mono ${bestSide === "over" ? "text-blue-500/30" : "text-blue-400/60"}`}
+          >
+            {fmtPct(fairUnder)}
+          </span>
+        </div>
+      )}
+
+      {/* Gap row */}
+      <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-2 border-t border-white/4">
         <span className="text-sm text-zinc-700 font-semibold self-center">
           Gap
         </span>
+        <div />
         <div className="flex justify-center">
           <GapPill gap={overGap} isBest={bestSide === "over"} />
         </div>

@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { Filters } from "./oddsBoard";
-import { PROP_LABELS } from "./oddsCard";
+
+export const PROP_LABELS: Record<string, string> = {
+  points: "PTS",
+  rebounds: "REB",
+  assists: "AST",
+  threes: "3PTS",
+  points_rebounds_assists: "P+R+A",
+  points_assists: "P+A",
+  points_rebounds: "P+R",
+  rebounds_assists: "R+A",
+};
 
 interface FilterSheetProps {
   filters: Filters;

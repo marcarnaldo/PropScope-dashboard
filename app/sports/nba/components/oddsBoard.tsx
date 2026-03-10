@@ -14,11 +14,17 @@ interface Fixture {
 }
 
 export interface NormalizedProp {
-  line: number;
+  fdLine: number;
+  siaLine: number;
   siaOdds: { over: number; under: number };
   fdOdds: { over: number; under: number };
   siaOddsNoVig: { over: number; under: number };
   fdOddsNoVig: { over: number; under: number };
+  edge?: {
+    fairProbOver: number;
+    fairProbUnder: number;
+    method: string;
+  };
 }
 
 export interface NormalizedOdds {
@@ -169,12 +175,14 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
       return false;
     if (filters.propType && row.propType !== filters.propType) return false;
 
-    // Calculate all necessary calculations
+    // Calculate gap using fair values
+    // When edge exists (different lines), fair comes from edge
+    // When lines match, fair = FD no-vig
     const dir = filters.direction;
-    const overGap =
-      (row.prop.fdOddsNoVig.over - row.prop.siaOddsNoVig.over) * 100;
-    const underGap =
-      (row.prop.fdOddsNoVig.under - row.prop.siaOddsNoVig.under) * 100;
+    const fairOver = row.prop.edge ? row.prop.edge.fairProbOver : row.prop.fdOddsNoVig.over;
+    const fairUnder = row.prop.edge ? row.prop.edge.fairProbUnder : row.prop.fdOddsNoVig.under;
+    const overGap = (fairOver - row.prop.siaOddsNoVig.over) * 100;
+    const underGap = (fairUnder - row.prop.siaOddsNoVig.under) * 100;
     const gap =
       dir === "over"
         ? overGap
@@ -205,14 +213,19 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     let bVal: number | string = 0;
 
     switch (filters.sortBy) {
-      case "gap":
+      case "gap": {
+        const aFairOver = a.prop.edge ? a.prop.edge.fairProbOver : a.prop.fdOddsNoVig.over;
+        const aFairUnder = a.prop.edge ? a.prop.edge.fairProbUnder : a.prop.fdOddsNoVig.under;
+        const bFairOver = b.prop.edge ? b.prop.edge.fairProbOver : b.prop.fdOddsNoVig.over;
+        const bFairUnder = b.prop.edge ? b.prop.edge.fairProbUnder : b.prop.fdOddsNoVig.under;
         aVal = isOver
-          ? a.prop.fdOddsNoVig.over - a.prop.siaOddsNoVig.over
-          : a.prop.fdOddsNoVig.under - a.prop.siaOddsNoVig.under;
+          ? aFairOver - a.prop.siaOddsNoVig.over
+          : aFairUnder - a.prop.siaOddsNoVig.under;
         bVal = isOver
-          ? b.prop.fdOddsNoVig.over - b.prop.siaOddsNoVig.over
-          : b.prop.fdOddsNoVig.under - b.prop.siaOddsNoVig.under;
+          ? bFairOver - b.prop.siaOddsNoVig.over
+          : bFairUnder - b.prop.siaOddsNoVig.under;
         break;
+      }
       case "fdNoVig":
         aVal = isOver ? a.prop.fdOddsNoVig.over : a.prop.fdOddsNoVig.under;
         bVal = isOver ? b.prop.fdOddsNoVig.over : b.prop.fdOddsNoVig.under;
