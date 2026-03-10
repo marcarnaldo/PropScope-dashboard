@@ -60,6 +60,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const updatedFixtureIds = useOddsSSE();
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
   const [hasFetched, setHasFetched] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     const isSSEUpdate = updatedFixtureIds.length > 0;
@@ -96,6 +97,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         return next;
       });
       setHasFetched(true);
+      if (isSSEUpdate) setLastUpdated(new Date());
     }
 
     fetchOdds();
@@ -402,11 +404,20 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
       {/* Main content area */}
       <div className="flex-1 lg:overflow-y-auto p-2 lg:p-4">
         {filters.matchup && (
-          <p className="text-xl sm:text-3xl font-bold text-zinc-400 mb-10">
+          <p className="text-xl sm:text-3xl font-bold text-zinc-400">
             {filters.matchup}
           </p>
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+        {lastUpdated && (
+          <p className="text-sm sm:text-lg text-zinc-600">
+            Last updated{" "}
+            {lastUpdated.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 mt-5">
           {sorted.slice(0, visibleCount).map((row) => (
             <OddsCard
               key={`${row.fixtureId}-${row.player}-${row.propType}`}

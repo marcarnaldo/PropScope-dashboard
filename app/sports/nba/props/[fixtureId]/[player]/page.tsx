@@ -114,7 +114,7 @@ export default async function PlayerPropsPage({
   const sameLine = playerProp.siaLine === playerProp.fdLine;
 
   return (
-    <main className="min-h-screen bg-zinc-900 text-zinc-300 max-w-400 mx-auto px-4 py-2">
+    <main className="min-h-screen bg-zinc-900 text-zinc-300 max-w-400 mx-auto px-4 py-2 md:px-2">
       <div>
         {/* Header */}
         <div className="pt-2 sm:p-5 mb-6">
@@ -149,64 +149,48 @@ export default async function PlayerPropsPage({
           </div>
         </div>
 
-        {/** Prop Tabs */}
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-6 pb-1">
-          {availablePropsForThisPlayer.map((p) => (
-            <a
-              key={p}
-              href={`/sports/nba/props/${fixtureId}/${encodeURIComponent(decodedPlayer)}?prop=${p}`}
-              className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-sm sm:text-md font-semibold transition-colors capitalize ${
-                p === prop
-                  ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                  : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {PROP_LABELS[p] ?? p}
-            </a>
-          ))}
-        </div>
+        <div className="md:px-4">
+          {/** Prop Tabs */}
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-6 pb-1">
+            {availablePropsForThisPlayer.map((p) => (
+              <a
+                key={p}
+                href={`/sports/nba/props/${fixtureId}/${encodeURIComponent(decodedPlayer)}?prop=${p}`}
+                className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-sm sm:text-md font-semibold transition-colors capitalize ${
+                  p === prop
+                    ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
+                    : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                {PROP_LABELS[p] ?? p}
+              </a>
+            ))}
+          </div>
 
-        <OddsComparison
-          books={[
-            {
-              label: "SIA",
-              line: playerProp.siaLine,
-              noVigOver: playerProp.siaOddsNoVig.over,
-              noVigUnder: playerProp.siaOddsNoVig.under,
-              color: "#e4e4e7",
-              dimmedColor: "#71717a",
-            },
-            {
-              label: "FD",
-              line: playerProp.fdLine,
-              noVigOver: playerProp.fdOddsNoVig.over,
-              noVigUnder: playerProp.fdOddsNoVig.under,
-              color: "#60a5fa",
-              dimmedColor: "rgb(59 130 246 / 0.5)",
-              isSharp: true,
-            },
-          ]}
-          edge={playerProp.edge}
-        />
-        {/* Odds Movement Charts */}
-
-        {sameLine ? (
-          <Chart
-            data={chartData}
+          <OddsComparison
             books={[
               {
-                label: "SIA Over",
-                lineKey: "siaOver",
+                label: "SIA",
+                line: playerProp.siaLine,
+                noVigOver: playerProp.siaOddsNoVig.over,
+                noVigUnder: playerProp.siaOddsNoVig.under,
                 color: "#e4e4e7",
-                title: "Odds Movement",
+                dimmedColor: "#71717a",
               },
-              { label: "SIA Under", lineKey: "siaUnder", color: "#a1a1aa" },
-              { label: "FD Over", lineKey: "fdOver", color: "#60a5fa" },
-              { label: "FD Under", lineKey: "fdUnder", color: "#3b82f6" },
+              {
+                label: "FD",
+                line: playerProp.fdLine,
+                noVigOver: playerProp.fdOddsNoVig.over,
+                noVigUnder: playerProp.fdOddsNoVig.under,
+                color: "#60a5fa",
+                dimmedColor: "rgb(59 130 246 / 0.5)",
+                isSharp: true,
+              },
             ]}
+            edge={playerProp.edge}
           />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Odds Movement Charts */}
+          {sameLine ? (
             <Chart
               data={chartData}
               books={[
@@ -214,51 +198,67 @@ export default async function PlayerPropsPage({
                   label: "SIA Over",
                   lineKey: "siaOver",
                   color: "#e4e4e7",
-                  title: "SIA Odds Movement",
+                  title: "Odds Movement",
                 },
                 { label: "SIA Under", lineKey: "siaUnder", color: "#a1a1aa" },
-              ]}
-            />
-            <Chart
-              data={chartData}
-              books={[
-                {
-                  label: "FD Over",
-                  lineKey: "fdOver",
-                  color: "#60a5fa",
-                  title: "FD Odds Movement",
-                },
+                { label: "FD Over", lineKey: "fdOver", color: "#60a5fa" },
                 { label: "FD Under", lineKey: "fdUnder", color: "#3b82f6" },
               ]}
             />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Chart
+                data={chartData}
+                books={[
+                  {
+                    label: "SIA Over",
+                    lineKey: "siaOver",
+                    color: "#e4e4e7",
+                    title: "SIA Odds Movement",
+                  },
+                  { label: "SIA Under", lineKey: "siaUnder", color: "#a1a1aa" },
+                ]}
+              />
+              <Chart
+                data={chartData}
+                books={[
+                  {
+                    label: "FD Over",
+                    lineKey: "fdOver",
+                    color: "#60a5fa",
+                    title: "FD Odds Movement",
+                  },
+                  { label: "FD Under", lineKey: "fdUnder", color: "#3b82f6" },
+                ]}
+              />
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Chart
+              data={lineMovementData}
+              books={[
+                {
+                  label: "SIA",
+                  lineKey: "siaLine",
+                  color: "#e4e4e7",
+                  title: "Line Movement",
+                },
+                { label: "FD", lineKey: "fdLine", color: "#60a5fa" },
+              ]}
+            />
+            <Chart
+              data={gapMovementData}
+              books={[
+                {
+                  label: "Over Gap",
+                  lineKey: "overGap",
+                  color: "#34d399",
+                  title: "Gap Movement",
+                },
+                { label: "Under Gap", lineKey: "underGap", color: "#60a5fa" },
+              ]}
+            />
           </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Chart
-            data={lineMovementData}
-            books={[
-              {
-                label: "SIA",
-                lineKey: "siaLine",
-                color: "#e4e4e7",
-                title: "Line Movement",
-              },
-              { label: "FD", lineKey: "fdLine", color: "#60a5fa" },
-            ]}
-          />
-          <Chart
-            data={gapMovementData}
-            books={[
-              {
-                label: "Over Gap",
-                lineKey: "overGap",
-                color: "#34d399",
-                title: "Gap Movement",
-              },
-              { label: "Under Gap", lineKey: "underGap", color: "#60a5fa" },
-            ]}
-          />
         </div>
       </div>
     </main>

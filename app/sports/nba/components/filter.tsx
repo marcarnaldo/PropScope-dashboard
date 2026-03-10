@@ -81,7 +81,7 @@ export default function FilterSidebar({
     <div className="flex flex-col gap-5">
       {/* Line Mode Toggle */}
       <div>
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+        <span className="text-sm sm:text-md font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Lines
         </span>
         <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800/60">
@@ -89,7 +89,7 @@ export default function FilterSidebar({
             <button
               key={m}
               onClick={() => update({ lineMode: m, minLineDiff: 0 })}
-              className={`flex-1 py-2 text-xs font-bold rounded-md transition-all duration-200 ${
+              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all duration-200 ${
                 filters.lineMode === m
                   ? "bg-emerald-500/15 text-emerald-400"
                   : "text-zinc-500 hover:text-zinc-400"
@@ -105,10 +105,10 @@ export default function FilterSidebar({
       {!isSame && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+            <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest">
               Line Diff ≥
             </span>
-            <span className="text-xs font-mono font-bold text-amber-400">
+            <span className="text-sm font-mono font-bold text-amber-400">
               {filters.minLineDiff > 0 ? filters.minLineDiff.toFixed(1) : "Any"}
             </span>
           </div>
@@ -123,18 +123,18 @@ export default function FilterSidebar({
             }
             className="w-full accent-amber-500 h-1"
           />
-          <p className="text-[9px] text-zinc-700 mt-1">SIA line - FD line</p>
+          <p className="text-xs text-zinc-700 mt-3">SIA line - FD line</p>
         </div>
       )}
 
       {/* Matchup */}
       <div ref={matchupRef} className="relative">
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Matchup
         </span>
         <button
           onClick={() => setMatchupOpen(!matchupOpen)}
-          className="w-full flex justify-between items-center gap-2 bg-zinc-900 border border-zinc-800/60 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-300 hover:text-zinc-200 transition-colors"
+          className="w-full flex justify-between items-center gap-2 bg-zinc-900 border border-zinc-800/60 rounded-lg px-3 py-2 text-sm font-semibold text-zinc-300 hover:text-zinc-200 transition-colors"
         >
           <span className="truncate">{filters.matchup || "All Matchups"}</span>
           <svg
@@ -157,7 +157,7 @@ export default function FilterSidebar({
                 update({ matchup: "" });
                 setMatchupOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+              className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                 filters.matchup === ""
                   ? "text-emerald-400 bg-emerald-500/10"
                   : "text-zinc-400 hover:bg-white/3"
@@ -172,7 +172,7 @@ export default function FilterSidebar({
                   update({ matchup: m });
                   setMatchupOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                   filters.matchup === m
                     ? "text-emerald-400 bg-emerald-500/10"
                     : "text-zinc-400 hover:bg-white/3"
@@ -187,13 +187,13 @@ export default function FilterSidebar({
 
       {/* Prop Type — multi-select */}
       <div>
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Props
         </span>
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => update({ propTypes: [] })}
-            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+            className={`px-2.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-150 ${
               filters.propTypes.length === 0
                 ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
                 : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
@@ -207,7 +207,7 @@ export default function FilterSidebar({
               <button
                 key={p}
                 onClick={() => toggleProp(p)}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+                className={`px-2.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-150 ${
                   active
                     ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
                     : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
@@ -222,7 +222,7 @@ export default function FilterSidebar({
 
       {/* Direction */}
       <div>
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Direction
         </span>
         <div className="flex gap-1.5">
@@ -234,7 +234,7 @@ export default function FilterSidebar({
             <button
               key={d.key}
               onClick={() => update({ direction: d.key })}
-              className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-150 ${
                 filters.direction === d.key
                   ? d.key === "over"
                     ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
@@ -255,10 +255,10 @@ export default function FilterSidebar({
       {/* Min Gap */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+          <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest">
             Min Gap
           </span>
-          <span className="text-xs font-mono font-bold text-emerald-400">
+          <span className="text-sm font-mono font-bold text-emerald-400">
             {filters.minGap > 0 ? `${filters.minGap.toFixed(1)}%` : "Any"}
           </span>
         </div>
@@ -271,7 +271,7 @@ export default function FilterSidebar({
           onChange={(e) => update({ minGap: parseFloat(e.target.value) })}
           className="w-full accent-emerald-500 h-1"
         />
-        <p className="text-[9px] text-zinc-700 mt-1">
+        <p className="text-xs text-zinc-700 mt-3">
           {isSame ? "FD no-vig − SIA no-vig" : "Fair value − SIA no-vig"}
         </p>
       </div>
@@ -280,7 +280,7 @@ export default function FilterSidebar({
       {filters.direction && (
         <div className="flex gap-2">
           <div className="flex-1">
-            <span className="text-[10px] text-zinc-500 font-semibold block mb-1.5">
+            <span className="text-sm text-zinc-500 font-semibold block mb-1.5">
               SIA ≥
             </span>
             <div className="relative">
@@ -330,7 +330,7 @@ export default function FilterSidebar({
 
       {/* Sort */}
       <div>
-        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Sort By
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -344,7 +344,7 @@ export default function FilterSidebar({
               <button
                 key={s.key}
                 onClick={() => handleSort(s.key)}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all duration-150 ${
+                className={`px-2.5 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 transition-all duration-150 ${
                   active
                     ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
                     : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
