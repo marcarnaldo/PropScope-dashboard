@@ -1,4 +1,4 @@
-import { getCachedOdds } from "@/lib/oddsCache";
+import { getOddsHistory } from "@/lib/queries/odds";
 import { getFixtureById } from "@/lib/queries/fixtures";
 import OddsComparison from "../../../components/oddsComparison";
 import { PROP_LABELS } from "../../../components/filter";
@@ -25,7 +25,7 @@ export default async function PlayerPropsPage({
 
   if (!prop) return <p className="text-zinc-400 p-8">No prop type specified</p>;
 
-  const oddsHistory = await getCachedOdds(fixtureIdNum);
+  const oddsHistory = await getOddsHistory(fixtureIdNum);
 
   const latestSnapshot = oddsHistory?.[oddsHistory.length - 1] ?? null;
 
