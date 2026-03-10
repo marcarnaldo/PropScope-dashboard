@@ -123,10 +123,10 @@ export default async function PlayerPropsPage({
               <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                 {decodedPlayer}
               </h1>
-              <p className="text-sm sm:text-lg text-zinc-500 mt-1">
+              <p className="text-sm sm:text-md text-zinc-500 mt-1">
                 {away_team} <span className="text-zinc-600">@</span> {home_team}
               </p>
-              <div className="flex items-center gap-2 text-sm sm:text-lg text-zinc-500 mt-2">
+              <div className="flex items-center gap-2 text-sm sm:text-md text-zinc-500 mt-2">
                 <span>
                   {new Date(start_date).toLocaleDateString("en-US", {
                     weekday: "short",
@@ -142,7 +142,7 @@ export default async function PlayerPropsPage({
               </div>
             </div>
             <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center">
-              <p className="text-sm sm:text-lg font-bold text-zinc-500 uppercase tracking-wider">
+              <p className="text-sm sm:text-md font-bold text-zinc-500 uppercase tracking-wider">
                 {PROP_LABELS[prop] ?? prop}
               </p>
             </div>
@@ -155,7 +155,7 @@ export default async function PlayerPropsPage({
             <a
               key={p}
               href={`/sports/nba/props/${fixtureId}/${encodeURIComponent(decodedPlayer)}?prop=${p}`}
-              className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-sm sm:text-lg font-semibold transition-colors capitalize ${
+              className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-sm sm:text-md font-semibold transition-colors capitalize ${
                 p === prop
                   ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
                   : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
