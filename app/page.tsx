@@ -3,6 +3,48 @@ const MARKETS = [
   "Pts + Reb + Ast", "Pts + Ast", "Pts + Reb", "Reb + Ast",
 ];
 
+const FEATURES = [
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+    title: "Line Movement Charts",
+    desc: "Track how odds, lines, and gaps shift over time with per-player charts. See exactly when books move and by how much.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </svg>
+    ),
+    title: "Same & Different Lines",
+    desc: "Filter by matching or mismatched lines. When lines differ, fair value is interpolated so the gap stays meaningful.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    ),
+    title: "Bet Tracker",
+    desc: "Mark props you've bet on. They stay highlighted as odds update in real time, so you can watch your positions move.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    title: "Real-Time Updates",
+    desc: "Odds stream in via SSE as soon as a new snapshot is scraped. No refreshing needed — cards update automatically.",
+  },
+];
+
 function CTAButton() {
   return (
     <a
@@ -25,7 +67,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen text-zinc-300" style={{ background: "#18181b" }}>
 
-      {/* Hero - centered, CTA up top */}
+      {/* Hero */}
       <section className="px-6 pt-24 pb-20 text-center relative overflow-hidden">
         <div
           className="absolute pointer-events-none"
@@ -43,14 +85,14 @@ export default function LandingPage() {
             PropScope
           </h1>
           <p className="text-lg text-zinc-400 leading-relaxed mb-8">
-            Compare Sports Interaction NBA player prop odds against FanDuel's sharp
-            line - with the vig removed.
+            Compare Sports Interaction NBA player prop odds against FanDuel&apos;s sharp
+            line — with the vig removed.
           </p>
           <CTAButton />
         </div>
       </section>
 
-      {/* Section 1: What you see - left text, right mini table */}
+      {/* Section 1: Spot the gaps */}
       <section className="px-6 py-20">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
           <div>
@@ -63,16 +105,16 @@ export default function LandingPage() {
               up green or red.
             </p>
             <p className="text-base text-zinc-400 leading-relaxed">
-              A positive gap means Sports Interaction is offering better value than FanDuel's
+              A positive gap means Sports Interaction is offering better value than FanDuel&apos;s
               sharp line suggests. A negative gap means FanDuel sees it
               differently.
             </p>
           </div>
-            <img src="/example.png" alt="Oddsboard" className="md:col-span-2 w-full rounded-xl" />
+          <img src="/example.png" alt="Oddsboard" className="md:col-span-2 w-full rounded-xl" />
         </div>
       </section>
 
-      {/* Section 2: What's tracked - right text, left market pills */}
+      {/* Section 2: Markets */}
       <section className="px-6 py-20" style={{ background: "rgba(0,0,0,0.15)" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1">
@@ -93,7 +135,7 @@ export default function LandingPage() {
               8 markets, every 5 minutes
             </h2>
             <p className="text-base text-zinc-400 leading-relaxed mb-4">
-              8 markets tracked for every player available on both Sports Interaction and Fanduel.
+              8 markets tracked for every player available on both Sports Interaction and FanDuel.
             </p>
             <p className="text-base text-zinc-400 leading-relaxed">
               Odds are scraped every 5 minutes starting 1 hour before tip-off
@@ -103,8 +145,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Section 3: Feature grid */}
+      <section className="px-6 py-20">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-zinc-50 mb-3 text-center">
+            What&apos;s under the hood
+          </h2>
+          <p className="text-base text-zinc-500 text-center mb-12 max-w-lg mx-auto">
+            Tools built around the board to help you filter, track, and react.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {FEATURES.map((f, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-zinc-800/60 p-5"
+                style={{ background: "rgba(19,21,27,0.7)" }}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+                    {f.icon}
+                  </div>
+                  <h3 className="text-sm font-bold text-zinc-200">
+                    {f.title}
+                  </h3>
+                </div>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="px-6 pt-8 pb-20 text-center">
+        <CTAButton />
+      </section>
+
       {/* Footer */}
-      <footer className="px-6 py-8 text-center">
+      <footer className="px-6 py-8 text-center border-t border-zinc-800/40">
         <p className="text-xs text-zinc-600">
           For informational purposes only. Not financial advice.
         </p>

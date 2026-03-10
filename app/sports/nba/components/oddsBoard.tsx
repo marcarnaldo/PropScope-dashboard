@@ -54,6 +54,7 @@ export interface Filters {
   minLineDiff: number;
   sortBy: "" | "gap" | "fdNoVig" | "siaNoVig";
   sortDir: "asc" | "desc";
+  bettedOnly: boolean;
 }
 
 export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
@@ -61,6 +62,30 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   const [oddsMap, setOddsMap] = useState<Record<number, any>>({});
   const [hasFetched, setHasFetched] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // ─── Bet tracking (localStorage) ───
+  const [bets, setBets] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const saved = JSON.parse(localStorage.getItem("propscope-bets") || "[]");
+      return new Set(saved);
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("propscope-bets", JSON.stringify([...bets]));
+  }, [bets]);
+
+  function toggleBet(key: string) {
+    setBets((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const isSSEUpdate = updatedFixtureIds.length > 0;
@@ -162,6 +187,12 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
 
   // ─── Filtering ───
   const filtered = allProps.filter((row) => {
+    // Betted only filter
+    if (filters.bettedOnly) {
+      const betKey = `${row.fixtureId}-${row.player}-${row.propType}`;
+      if (!bets.has(betKey)) return false;
+    }
+
     const hasDifferentLines = row.prop.siaLine !== row.prop.fdLine;
 
     // Line mode filter: same = only same lines, different = only different lines
@@ -338,53 +369,103 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
   }
 
   if (allProps.length === 0) {
+    if (fixtures.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+          <div className="relative mb-6">
+            <div
+              className="absolute inset-0 rounded-full blur-2xl opacity-20"
+              style={{ background: "radial-gradient(circle, #10b981, transparent)" }}
+            />
+            <div className="relative w-16 h-16 rounded-2xl border border-zinc-700/50 bg-zinc-800/60 flex items-center justify-center text-zinc-500">
+              <svg
+                width="26"
+                height="26"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-zinc-200 font-semibold text-lg mb-2">
+            No games scheduled
+          </p>
+          <p className="text-zinc-500 text-sm text-center max-w-xs leading-relaxed">
+            No NBA games are on the slate right now. Check back on game day —
+            props go live about an hour before tip-off.
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className="py-12 sm:max-w-400 sm:mx-auto sm:px-4">
-        <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
-          Props aren&apos;t available yet, they usually appear about an hour
-          before tip-off.
-        </p>
-        {fixtures.length > 0 ? (
-          <>
-            <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
-              Today&apos;s Schedule
-            </p>
-            <div className="space-y-1.5">
-              {fixtures.map((f) => (
-                <div
-                  key={f.fixture_id}
-                  className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 min-w-0 sm:flex sm:justify-between sm:items-center"
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-zinc-300 font-medium truncate">
-                      {f.away_team}
-                    </span>
-                    <span className="text-zinc-600 text-xs shrink-0">@</span>
-                    <span className="text-zinc-300 font-medium truncate">
-                      {f.home_team}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 mt-1.5 sm:mt-0 sm:font-semibold sm:bg-zinc-800/50 sm:px-2.5 sm:py-1 sm:rounded-lg sm:shrink-0 sm:ml-3">
-                    {new Date(f.start_date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                    {" · "}
-                    {new Date(f.start_date).toLocaleTimeString("en-US", {
+      <div className="flex flex-col items-center px-4 py-14 sm:py-20">
+        {/* Header */}
+        <div className="text-center mb-10 max-w-sm">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-500/80 uppercase tracking-widest mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Waiting for odds
+          </div>
+          <p className="text-zinc-200 font-bold text-xl mb-1.5">
+            Today&apos;s Games
+          </p>
+          <p className="text-zinc-500 text-sm">
+            Props typically appear about an hour before tip-off
+          </p>
+        </div>
+
+        {/* Schedule */}
+        <div className="w-full max-w-md space-y-2">
+          {fixtures.map((f) => {
+            const date = new Date(f.start_date);
+            return (
+              <div
+                key={f.fixture_id}
+                className="relative rounded-xl border border-zinc-800/70 px-5 py-4 flex items-center justify-between gap-4 overflow-hidden"
+                style={{ background: "rgba(19,21,27,0.6)" }}
+              >
+                {/* Left accent bar */}
+                <div className="absolute left-0 top-3 bottom-3 w-0.75 rounded-full bg-zinc-700" />
+
+                {/* Matchup */}
+                <div className="flex items-center gap-2.5 min-w-0 pl-1">
+                  <span className="text-zinc-200 font-semibold text-sm truncate">
+                    {f.away_team}
+                  </span>
+                  <span className="text-zinc-600 text-xs shrink-0">@</span>
+                  <span className="text-zinc-200 font-semibold text-sm truncate">
+                    {f.home_team}
+                  </span>
+                </div>
+
+                {/* Date + time */}
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-zinc-300 tabular-nums leading-none">
+                    {date.toLocaleTimeString("en-US", {
                       hour: "numeric",
                       minute: "2-digit",
                     })}
                   </p>
+                  <p className="text-[11px] text-zinc-600 mt-0.5 tabular-nums">
+                    {date.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="text-zinc-600 text-sm text-center">
-            No games available right now. Check back later.
-          </p>
-        )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -399,6 +480,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         onFilterChange={setFilters}
         matchups={matchups}
         propTypes={propTypes}
+        betCount={bets.size}
       />
 
       {/* Main content area */}
@@ -418,12 +500,17 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
           </p>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 mt-5">
-          {sorted.slice(0, visibleCount).map((row) => (
-            <OddsCard
-              key={`${row.fixtureId}-${row.player}-${row.propType}`}
-              row={row}
-            />
-          ))}
+          {sorted.slice(0, visibleCount).map((row) => {
+            const betKey = `${row.fixtureId}-${row.player}-${row.propType}`;
+            return (
+              <OddsCard
+                key={betKey}
+                row={row}
+                isBetted={bets.has(betKey)}
+                onToggleBet={() => toggleBet(betKey)}
+              />
+            );
+          })}
         </div>
         {sorted.length === 0 && (
           <p className="text-center text-zinc-600 text-sm py-12">

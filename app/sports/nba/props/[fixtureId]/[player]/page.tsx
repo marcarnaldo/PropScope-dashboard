@@ -2,7 +2,9 @@ import { getCachedOdds } from "@/lib/oddsCache";
 import { getFixtureById } from "@/lib/queries/fixtures";
 import OddsComparison from "../../../components/oddsComparison";
 import { PROP_LABELS } from "../../../components/filter";
+import { ChipLink, PropTypeBadge } from "../../../components/ui";
 import Chart from "../../../components/chart";
+
 export default async function PlayerPropsPage({
   params,
   searchParams,
@@ -11,21 +13,16 @@ export default async function PlayerPropsPage({
   searchParams: Promise<{ prop?: string; line?: string }>;
 }) {
   const { fixtureId, player } = await params;
-  const { prop, line } = await searchParams;
+  const { prop } = await searchParams;
 
-  // Parse the id from string to int
   const fixtureIdNum = parseInt(fixtureId);
-
-  // Get the player's name
   const decodedPlayer = decodeURIComponent(player);
 
   const fixture = await getFixtureById(fixtureIdNum);
-  // Replace later
   if (!fixture) return <p className="text-zinc-400 p-8">Fixture not found</p>;
 
-  const { home_team, away_team, start_date, status } = fixture;
+  const { home_team, away_team, start_date } = fixture;
 
-  // Replace later
   if (!prop) return <p className="text-zinc-400 p-8">No prop type specified</p>;
 
   const oddsHistory = await getCachedOdds(fixtureIdNum);
@@ -37,15 +34,12 @@ export default async function PlayerPropsPage({
       ? JSON.parse(latestSnapshot.odds_data)
       : latestSnapshot?.odds_data;
 
-  // Get all props and odds
   const allPlayerProps = oddsData?.props?.[decodedPlayer] ?? {};
-  // Get all available prop names
   const availablePropsForThisPlayer = Object.keys(allPlayerProps);
 
-  // Get the current odds for the selected player's prop
   const playerProp = oddsData?.props?.[decodedPlayer]?.[prop];
 
-  // Build the chart data from oddsHistory
+  // Build probability chart data from snapshots
   const chartData = oddsHistory
     .map((snap) => {
       const od =
@@ -67,7 +61,7 @@ export default async function PlayerPropsPage({
     })
     .filter((d) => d !== null) as Record<string, string | number>[];
 
-  // Build line movement data (actual line numbers over time)
+  // Track how the actual line numbers moved over time
   const lineMovementData = oddsHistory
     .map((snap) => {
       const od =
@@ -87,7 +81,7 @@ export default async function PlayerPropsPage({
     })
     .filter((d) => d !== null) as Record<string, string | number>[];
 
-  // Build gap movement data (FD no-vig minus SIA no-vig over time)
+  // Track how the gap (FD no-vig − SIA no-vig) moved over time
   const gapMovementData = oddsHistory
     .map((snap) => {
       const od =
@@ -116,7 +110,6 @@ export default async function PlayerPropsPage({
   return (
     <main className="min-h-screen bg-zinc-900 text-zinc-300 max-w-400 mx-auto px-4 py-2 md:px-2">
       <div>
-        {/* Header */}
         <div className="pt-2 sm:p-5 mb-6">
           <div className="grid grid-cols-[1fr_auto] gap-3 sm:gap-4 items-center">
             <div>
@@ -141,29 +134,24 @@ export default async function PlayerPropsPage({
                 </span>
               </div>
             </div>
-            <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center">
-              <p className="text-sm sm:text-md font-bold text-zinc-500 uppercase tracking-wider">
-                {PROP_LABELS[prop] ?? prop}
-              </p>
-            </div>
+            <PropTypeBadge
+              label={PROP_LABELS[prop] ?? prop}
+              className="px-3 py-2 sm:px-4 sm:py-3"
+            />
           </div>
         </div>
 
         <div className="md:px-4">
-          {/** Prop Tabs */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-6 pb-1">
             {availablePropsForThisPlayer.map((p) => (
-              <a
+              <ChipLink
                 key={p}
+                active={p === prop}
                 href={`/sports/nba/props/${fixtureId}/${encodeURIComponent(decodedPlayer)}?prop=${p}`}
-                className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-sm sm:text-md font-semibold transition-colors capitalize ${
-                  p === prop
-                    ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                    : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
-                }`}
+                className="whitespace-nowrap"
               >
                 {PROP_LABELS[p] ?? p}
-              </a>
+              </ChipLink>
             ))}
           </div>
 
@@ -189,17 +177,13 @@ export default async function PlayerPropsPage({
             ]}
             edge={playerProp.edge}
           />
-          {/* Odds Movement Charts */}
+
+          {/* When lines match, show both books together. When they differ, split into two charts. */}
           {sameLine ? (
             <Chart
               data={chartData}
               books={[
-                {
-                  label: "SIA Over",
-                  lineKey: "siaOver",
-                  color: "#e4e4e7",
-                  title: "Odds Movement",
-                },
+                { label: "SIA Over", lineKey: "siaOver", color: "#e4e4e7", title: "Odds Movement" },
                 { label: "SIA Under", lineKey: "siaUnder", color: "#a1a1aa" },
                 { label: "FD Over", lineKey: "fdOver", color: "#60a5fa" },
                 { label: "FD Under", lineKey: "fdUnder", color: "#3b82f6" },
@@ -210,51 +194,32 @@ export default async function PlayerPropsPage({
               <Chart
                 data={chartData}
                 books={[
-                  {
-                    label: "SIA Over",
-                    lineKey: "siaOver",
-                    color: "#e4e4e7",
-                    title: "SIA Odds Movement",
-                  },
+                  { label: "SIA Over", lineKey: "siaOver", color: "#e4e4e7", title: "SIA Odds Movement" },
                   { label: "SIA Under", lineKey: "siaUnder", color: "#a1a1aa" },
                 ]}
               />
               <Chart
                 data={chartData}
                 books={[
-                  {
-                    label: "FD Over",
-                    lineKey: "fdOver",
-                    color: "#60a5fa",
-                    title: "FD Odds Movement",
-                  },
+                  { label: "FD Over", lineKey: "fdOver", color: "#60a5fa", title: "FD Odds Movement" },
                   { label: "FD Under", lineKey: "fdUnder", color: "#3b82f6" },
                 ]}
               />
             </div>
           )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Chart
               data={lineMovementData}
               books={[
-                {
-                  label: "SIA",
-                  lineKey: "siaLine",
-                  color: "#e4e4e7",
-                  title: "Line Movement",
-                },
+                { label: "SIA", lineKey: "siaLine", color: "#e4e4e7", title: "Line Movement" },
                 { label: "FD", lineKey: "fdLine", color: "#60a5fa" },
               ]}
             />
             <Chart
               data={gapMovementData}
               books={[
-                {
-                  label: "Over Gap",
-                  lineKey: "overGap",
-                  color: "#34d399",
-                  title: "Gap Movement",
-                },
+                { label: "Over Gap", lineKey: "overGap", color: "#34d399", title: "Gap Movement" },
                 { label: "Under Gap", lineKey: "underGap", color: "#60a5fa" },
               ]}
             />

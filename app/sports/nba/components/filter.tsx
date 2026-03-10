@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Filters } from "./oddsBoard";
+import { ChipButton } from "./ui";
 
+// Shared across filter sidebar, cards, and the player props page
 export const PROP_LABELS: Record<string, string> = {
   points: "PTS",
   rebounds: "REB",
@@ -19,6 +21,7 @@ interface FilterSidebarProps {
   onFilterChange: (filters: Filters) => void;
   matchups: string[];
   propTypes: string[];
+  betCount: number;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -32,13 +35,109 @@ export const DEFAULT_FILTERS: Filters = {
   minLineDiff: 0,
   sortBy: "",
   sortDir: "desc",
+  bettedOnly: false,
 };
+
+// ─── Local UI primitives ───────────────────────────────────────────────────
+
+function FilterLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+      {children}
+    </span>
+  );
+}
+
+function SliderFilter({
+  label,
+  value,
+  displayValue,
+  displayValueClass = "text-emerald-400",
+  min,
+  max,
+  step,
+  onChange,
+  accentClass = "accent-emerald-500",
+  hint,
+}: {
+  label: string;
+  value: number;
+  displayValue: string;
+  displayValueClass?: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (val: number) => void;
+  accentClass?: string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest">
+          {label}
+        </span>
+        <span className={`text-sm font-mono font-bold ${displayValueClass}`}>
+          {displayValue}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className={`w-full ${accentClass} h-1`}
+      />
+      {hint && <p className="text-xs text-zinc-700 mt-3">{hint}</p>}
+    </div>
+  );
+}
+
+function PercentInput({
+  label,
+  labelClass = "text-sm text-zinc-500 font-semibold",
+  value,
+  onChange,
+  inputClass = "text-zinc-300 focus:border-emerald-500/30",
+}: {
+  label: string;
+  labelClass?: string;
+  value: number;
+  onChange: (val: number) => void;
+  inputClass?: string;
+}) {
+  return (
+    <div className="flex-1">
+      <span className={`${labelClass} block mb-1.5`}>{label}</span>
+      <div className="relative">
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          value={value || ""}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className={`w-full bg-zinc-900 border border-zinc-800/60 rounded-lg px-2.5 py-2 text-xs font-mono placeholder:text-zinc-700 focus:outline-none ${inputClass}`}
+        />
+        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600">
+          %
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Filter sidebar ────────────────────────────────────────────────────────
 
 export default function FilterSidebar({
   filters,
   onFilterChange,
   matchups,
   propTypes,
+  betCount,
 }: FilterSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [matchupOpen, setMatchupOpen] = useState(false);
@@ -66,6 +165,7 @@ export default function FilterSidebar({
     }
   }
 
+  // Count active filters so the mobile FAB badge shows how many are on
   const activeCount = [
     filters.matchup,
     filters.propTypes.length > 0,
@@ -74,16 +174,35 @@ export default function FilterSidebar({
     filters.minSiaNoVig,
     filters.minFdNoVig,
     filters.minLineDiff,
+    filters.bettedOnly,
   ].filter(Boolean).length;
 
-  /* ─── Shared filter content ─── */
   const filterContent = (
     <div className="flex flex-col gap-5">
-      {/* Line Mode Toggle */}
+      <button
+        onClick={() => update({ bettedOnly: !filters.bettedOnly })}
+        className={`w-full flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-bold transition-all duration-150 ${
+          filters.bettedOnly
+            ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
+            : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
+        }`}
+      >
+        <span>My Bets</span>
+        {betCount > 0 && (
+          <span
+            className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
+              filters.bettedOnly
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "bg-zinc-800 text-zinc-500"
+            }`}
+          >
+            {betCount}
+          </span>
+        )}
+      </button>
+
       <div>
-        <span className="text-sm sm:text-md font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
-          Lines
-        </span>
+        <FilterLabel>Lines</FilterLabel>
         <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800/60">
           {(["same", "different"] as const).map((m) => (
             <button
@@ -101,37 +220,24 @@ export default function FilterSidebar({
         </div>
       </div>
 
-      {/* Min Line Diff — only in Different mode */}
+      {/* Min line diff — only relevant in "different" mode */}
       {!isSame && (
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest">
-              Line Diff ≥
-            </span>
-            <span className="text-sm font-mono font-bold text-amber-400">
-              {filters.minLineDiff > 0 ? filters.minLineDiff.toFixed(1) : "Any"}
-            </span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="5"
-            step="0.5"
-            value={filters.minLineDiff}
-            onChange={(e) =>
-              update({ minLineDiff: parseFloat(e.target.value) })
-            }
-            className="w-full accent-amber-500 h-1"
-          />
-          <p className="text-xs text-zinc-700 mt-3">SIA line - FD line</p>
-        </div>
+        <SliderFilter
+          label="Line Diff ≥"
+          value={filters.minLineDiff}
+          displayValue={filters.minLineDiff > 0 ? filters.minLineDiff.toFixed(1) : "Any"}
+          displayValueClass="text-amber-400"
+          min={0}
+          max={5}
+          step={0.5}
+          onChange={(v) => update({ minLineDiff: v })}
+          accentClass="accent-amber-500"
+          hint="SIA line - FD line"
+        />
       )}
 
-      {/* Matchup */}
       <div ref={matchupRef} className="relative">
-        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
-          Matchup
-        </span>
+        <FilterLabel>Matchup</FilterLabel>
         <button
           onClick={() => setMatchupOpen(!matchupOpen)}
           className="w-full flex justify-between items-center gap-2 bg-zinc-900 border border-zinc-800/60 rounded-lg px-3 py-2 text-sm font-semibold text-zinc-300 hover:text-zinc-200 transition-colors"
@@ -185,46 +291,29 @@ export default function FilterSidebar({
         )}
       </div>
 
-      {/* Prop Type — multi-select */}
       <div>
-        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
-          Props
-        </span>
+        <FilterLabel>Props</FilterLabel>
         <div className="flex flex-wrap gap-1.5">
-          <button
+          <ChipButton
+            active={filters.propTypes.length === 0}
             onClick={() => update({ propTypes: [] })}
-            className={`px-2.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-150 ${
-              filters.propTypes.length === 0
-                ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
-                : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
-            }`}
           >
             All
-          </button>
-          {propTypes.map((p) => {
-            const active = filters.propTypes.includes(p);
-            return (
-              <button
-                key={p}
-                onClick={() => toggleProp(p)}
-                className={`px-2.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-150 ${
-                  active
-                    ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
-                    : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
-                }`}
-              >
-                {PROP_LABELS[p] ?? p}
-              </button>
-            );
-          })}
+          </ChipButton>
+          {propTypes.map((p) => (
+            <ChipButton
+              key={p}
+              active={filters.propTypes.includes(p)}
+              onClick={() => toggleProp(p)}
+            >
+              {PROP_LABELS[p] ?? p}
+            </ChipButton>
+          ))}
         </div>
       </div>
 
-      {/* Direction */}
       <div>
-        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
-          Direction
-        </span>
+        <FilterLabel>Direction</FilterLabel>
         <div className="flex gap-1.5">
           {[
             { key: "" as const, label: "Both" },
@@ -252,113 +341,59 @@ export default function FilterSidebar({
 
       <div className="h-px bg-zinc-800/60" />
 
-      {/* Min Gap */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest">
-            Min Gap
-          </span>
-          <span className="text-sm font-mono font-bold text-emerald-400">
-            {filters.minGap > 0 ? `${filters.minGap.toFixed(1)}%` : "Any"}
-          </span>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="10"
-          step="0.5"
-          value={filters.minGap}
-          onChange={(e) => update({ minGap: parseFloat(e.target.value) })}
-          className="w-full accent-emerald-500 h-1"
-        />
-        <p className="text-xs text-zinc-700 mt-3">
-          {isSame ? "FD no-vig − SIA no-vig" : "Fair value − SIA no-vig"}
-        </p>
-      </div>
+      <SliderFilter
+        label="Min Gap"
+        value={filters.minGap}
+        displayValue={filters.minGap > 0 ? `${filters.minGap.toFixed(1)}%` : "Any"}
+        min={0}
+        max={10}
+        step={0.5}
+        onChange={(v) => update({ minGap: v })}
+        hint={isSame ? "FD no-vig − SIA no-vig" : "Fair value − SIA no-vig"}
+      />
 
-      {/* SIA + FD/Fair thresholds — only when direction is set */}
+      {/* SIA and FD/Fair thresholds — only when a direction is selected */}
       {filters.direction && (
         <div className="flex gap-2">
-          <div className="flex-1">
-            <span className="text-sm text-zinc-500 font-semibold block mb-1.5">
-              SIA ≥
-            </span>
-            <div className="relative">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={filters.minSiaNoVig || ""}
-                onChange={(e) =>
-                  update({ minSiaNoVig: parseFloat(e.target.value) || 0 })
-                }
-                placeholder="0"
-                className="w-full bg-zinc-900 border border-zinc-800/60 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/30"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600">
-                %
-              </span>
-            </div>
-          </div>
-          <div className="flex-1">
-            <span className="text-[10px] text-zinc-500 font-semibold block mb-1.5">
-              {isSame ? "FD ≥" : "Fair ≥"}
-            </span>
-            <div className="relative">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={filters.minFdNoVig || ""}
-                onChange={(e) =>
-                  update({ minFdNoVig: parseFloat(e.target.value) || 0 })
-                }
-                placeholder="0"
-                className="w-full bg-zinc-900 border border-zinc-800/60 rounded-lg px-2.5 py-2 text-xs font-mono text-blue-400 placeholder:text-zinc-700 focus:outline-none focus:border-blue-500/30"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600">
-                %
-              </span>
-            </div>
-          </div>
+          <PercentInput
+            label="SIA ≥"
+            value={filters.minSiaNoVig}
+            onChange={(v) => update({ minSiaNoVig: v })}
+          />
+          <PercentInput
+            label={isSame ? "FD ≥" : "Fair ≥"}
+            labelClass="text-[10px] text-zinc-500 font-semibold"
+            value={filters.minFdNoVig}
+            onChange={(v) => update({ minFdNoVig: v })}
+            inputClass="text-blue-400 focus:border-blue-500/30"
+          />
         </div>
       )}
 
       <div className="h-px bg-zinc-800/60" />
 
-      {/* Sort */}
       <div>
-        <span className="text-sm font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
-          Sort By
-        </span>
+        <FilterLabel>Sort By</FilterLabel>
         <div className="flex flex-wrap gap-1.5">
           {[
             { key: "gap" as const, label: "Gap" },
             { key: "fdNoVig" as const, label: isSame ? "FD %" : "Fair %" },
             { key: "siaNoVig" as const, label: "SIA %" },
-          ].map((s) => {
-            const active = filters.sortBy === s.key;
-            return (
-              <button
-                key={s.key}
-                onClick={() => handleSort(s.key)}
-                className={`px-2.5 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 transition-all duration-150 ${
-                  active
-                    ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
-                    : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
-                }`}
-              >
-                {s.label}
-                {active && (
-                  <span className="text-[10px]">
-                    {filters.sortDir === "desc" ? "↓" : "↑"}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          ].map((s) => (
+            <ChipButton
+              key={s.key}
+              active={filters.sortBy === s.key}
+              onClick={() => handleSort(s.key)}
+              className="flex items-center gap-1"
+            >
+              {s.label}
+              {filters.sortBy === s.key && (
+                <span className="text-[10px]">
+                  {filters.sortDir === "desc" ? "↓" : "↑"}
+                </span>
+              )}
+            </ChipButton>
+          ))}
         </div>
       </div>
     </div>
@@ -366,19 +401,18 @@ export default function FilterSidebar({
 
   return (
     <>
-      {/* ─── Desktop: always-visible sidebar (lg+) ─── */}
+      {/* Desktop: always-visible sidebar */}
       <div className="hidden lg:block w-65 shrink-0 h-full bg-zinc-900 border-r border-zinc-800/60">
         <div className="p-4 pt-4 overflow-y-auto h-full pb-8">
           {filterContent}
         </div>
       </div>
 
-      {/* ─── Mobile: floating funnel FAB (bottom-right) ─── */}
+      {/* Mobile: floating filter button (bottom-right) */}
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed bottom-5 right-5 z-40 w-12 h-12 flex items-center justify-center rounded-full border border-zinc-700/60 bg-zinc-800/90 backdrop-blur-md shadow-lg shadow-black/40 text-zinc-400 hover:text-emerald-400 transition-colors"
       >
-        {/* Funnel icon */}
         <svg
           width="18"
           height="18"
@@ -398,7 +432,7 @@ export default function FilterSidebar({
         )}
       </button>
 
-      {/* ─── Mobile: left drawer overlay ─── */}
+      {/* Mobile: slide-in drawer from the left */}
       <div
         className={`lg:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
           mobileOpen
@@ -407,17 +441,14 @@ export default function FilterSidebar({
         }`}
         onClick={() => setMobileOpen(false)}
       >
-        {/* Backdrop */}
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-        {/* Drawer */}
         <div
           className={`absolute top-0 left-0 h-full w-72 max-w-[80vw] bg-zinc-900 border-r border-zinc-800/60 overflow-y-auto transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="flex justify-between items-center p-4 pb-2 border-b border-zinc-800/60 mb-2">
             <span className="text-sm font-bold text-zinc-100">Filters</span>
             <button
@@ -428,7 +459,6 @@ export default function FilterSidebar({
             </button>
           </div>
 
-          {/* Filter content */}
           <div className="p-4 pt-2 pb-8">{filterContent}</div>
         </div>
       </div>
