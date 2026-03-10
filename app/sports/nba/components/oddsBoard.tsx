@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useOddsSSE } from "@/lib/useOddsSSE";
 import OddsCard from "./oddsCard";
-import FilterSheet from "./filter";
+import FilterSidebar, { DEFAULT_FILTERS } from "./filter";
 
 interface Fixture {
   fixture_id: number;
@@ -44,12 +44,15 @@ export interface PropRow {
 }
 
 export interface Filters {
-  team: string;
-  propType: string;
-  minGap: number;
+  lineMode: "same" | "different";
+  matchup: string;
+  propTypes: string[];
   direction: "" | "over" | "under";
-  minFdNoVig: number;
-  sortBy: "" | "gap" | "fdNoVig";
+  minGap: number;
+  minSiaNoVig: number;
+  minFdNoVig: number; // In "different" mode this acts as min fair value
+  minLineDiff: number;
+  sortBy: "" | "gap" | "fdNoVig" | "siaNoVig";
   sortDir: "asc" | "desc";
 }
 
@@ -71,12 +74,12 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
       const results = await Promise.all(
         idsToFetch.map(async (id) => {
           if (isSSEUpdate) {
-            // If there is an SSE update, get the latest odds from db
-            const res = await fetch(`/api/odds/latest/${id}`, { cache: "no-store" });
+            const res = await fetch(`/api/odds/latest/${id}`, {
+              cache: "no-store",
+            });
             const latestOdds = await res.json();
             return { id, latestOdds };
           } else {
-            // We hit the cache if there are no new updates. This is good when renavigating to oddsboard over and over again
             const res = await fetch(`/api/odds/history/${id}`);
             const odds = await res.json();
             const latestOdds = odds?.[odds.length - 1] ?? null;
@@ -98,27 +101,19 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     fetchOdds();
   }, [fixtures, updatedFixtureIds]);
 
+  // Build allProps from fixtures + odds
   const allProps: PropRow[] = [];
   fixtures.forEach((fixture: Fixture) => {
-    // Grab the all odds entry that corresponds with this fixture_id
     const oddsRow = oddsMap[fixture.fixture_id];
 
-    // Nested ternary
     const oddsData: NormalizedOdds | null = oddsRow
-      ? // Check if the odds_data is a string
-        typeof oddsRow.odds_data === "string"
-        ? // If it is a string, we must parse it to JSON
-          JSON.parse(oddsRow.odds_data)
-        : // Otherwise, just set oddsRow to odds_data
-          oddsRow.odds_data
-      : // If not a string, null
-        null;
+      ? typeof oddsRow.odds_data === "string"
+        ? JSON.parse(oddsRow.odds_data)
+        : oddsRow.odds_data
+      : null;
 
-    // Improve this later to return a message if needed
-    // If there is no oddsData, do nothing for now
     if (!oddsData) return;
 
-    // Push each prop to save it. We will pass it to the PropsTable to render the info in the UI.
     for (const [player, props] of Object.entries(oddsData.props)) {
       for (const [propType, prop] of Object.entries(props)) {
         allProps.push({
@@ -134,53 +129,73 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     }
   });
 
+  // Filters state with sessionStorage persistence
   const [filters, setFilters] = useState<Filters>(() => {
-    if (typeof window === "undefined")
-      return {
-        team: "",
-        propType: "",
-        minGap: 0,
-        direction: "",
-        minFdNoVig: 0,
-        sortBy: "",
-        sortDir: "desc",
-      };
+    if (typeof window === "undefined") return DEFAULT_FILTERS;
 
-    // Get all the filters that's been set so that when I go back to nba page, the user will still see the filtered cards
     const saved = sessionStorage.getItem("propscope-filters");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          team: "",
-          propType: "",
-          minGap: 0,
-          direction: "",
-          minFdNoVig: 0,
-          sortBy: "",
-          sortDir: "desc",
-        };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure all new fields exist (handles old cached filters)
+        return { ...DEFAULT_FILTERS, ...parsed };
+      } catch {
+        return DEFAULT_FILTERS;
+      }
+    }
+    return DEFAULT_FILTERS;
   });
-  // Save to sessionStorage whenever filters change
+
   useEffect(() => {
     sessionStorage.setItem("propscope-filters", JSON.stringify(filters));
   }, [filters]);
 
+  // Build matchup strings from fixtures: "Away @ Home"
+  const matchups = [
+    ...new Set(fixtures.map((f) => `${f.away_team} @ ${f.home_team}`)),
+  ];
+
+  // Get all prop types
+  const propTypes = [...new Set(allProps.map((row) => row.propType))];
+
+  // ─── Filtering ───
   const filtered = allProps.filter((row) => {
-    // Skip all rows that are not specified in the filter
+    const hasDifferentLines = row.prop.siaLine !== row.prop.fdLine;
+
+    // Line mode filter: same = only same lines, different = only different lines
+    if (filters.lineMode === "same" && hasDifferentLines) return false;
+    if (filters.lineMode === "different" && !hasDifferentLines) return false;
+
+    // Min line diff (only relevant in different mode)
+    if (filters.lineMode === "different" && filters.minLineDiff > 0) {
+      const lineDiff = Math.abs(row.prop.siaLine - row.prop.fdLine);
+      if (lineDiff < filters.minLineDiff) return false;
+    }
+
+    // Matchup filter
+    if (filters.matchup) {
+      const rowMatchup = `${row.awayTeam} @ ${row.homeTeam}`;
+      if (rowMatchup !== filters.matchup) return false;
+    }
+
+    // Prop type filter (multi-select)
     if (
-      filters.team &&
-      row.homeTeam !== filters.team &&
-      row.awayTeam !== filters.team
-    )
+      filters.propTypes.length > 0 &&
+      !filters.propTypes.includes(row.propType)
+    ) {
       return false;
-    if (filters.propType && row.propType !== filters.propType) return false;
+    }
 
     // Calculate gap using fair values
-    // When edge exists (different lines), fair comes from edge
-    // When lines match, fair = FD no-vig
+    // Same lines: fair = FD no-vig
+    // Different lines: fair = edge fair probs
     const dir = filters.direction;
-    const fairOver = row.prop.edge ? row.prop.edge.fairProbOver : row.prop.fdOddsNoVig.over;
-    const fairUnder = row.prop.edge ? row.prop.edge.fairProbUnder : row.prop.fdOddsNoVig.under;
+    const fairOver = row.prop.edge
+      ? row.prop.edge.fairProbOver
+      : row.prop.fdOddsNoVig.over;
+    const fairUnder = row.prop.edge
+      ? row.prop.edge.fairProbUnder
+      : row.prop.fdOddsNoVig.under;
     const overGap = (fairOver - row.prop.siaOddsNoVig.over) * 100;
     const underGap = (fairUnder - row.prop.siaOddsNoVig.under) * 100;
     const gap =
@@ -189,35 +204,58 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         : dir === "under"
           ? underGap
           : Math.max(overGap, underGap);
-    const noVig =
-      dir === "over"
-        ? row.prop.fdOddsNoVig.over * 100
-        : dir === "under"
-          ? row.prop.fdOddsNoVig.under * 100
-          : 0;
 
-    // Skip all rows that are not within the parameters set
     if (filters.minGap && gap < filters.minGap) return false;
-    if (dir && filters.minFdNoVig && noVig < filters.minFdNoVig) return false;
+
+    // Direction-dependent thresholds
+    if (dir) {
+      // SIA no-vig threshold
+      const siaNoVig =
+        dir === "over"
+          ? row.prop.siaOddsNoVig.over * 100
+          : row.prop.siaOddsNoVig.under * 100;
+      if (filters.minSiaNoVig && siaNoVig < filters.minSiaNoVig) return false;
+
+      // FD no-vig / Fair value threshold
+      // In same mode: FD no-vig. In different mode: fair value.
+      const fdOrFair =
+        dir === "over"
+          ? (filters.lineMode === "different"
+              ? fairOver
+              : row.prop.fdOddsNoVig.over) * 100
+          : (filters.lineMode === "different"
+              ? fairUnder
+              : row.prop.fdOddsNoVig.under) * 100;
+      if (filters.minFdNoVig && fdOrFair < filters.minFdNoVig) return false;
+    }
 
     return true;
   });
 
+  // ─── Sorting ───
   const sorted = [...filtered].sort((a, b) => {
     if (!filters.sortBy) return 0;
 
     const dir = filters.direction || "over";
     const isOver = dir === "over";
 
-    let aVal: number | string = 0;
-    let bVal: number | string = 0;
+    let aVal = 0;
+    let bVal = 0;
 
     switch (filters.sortBy) {
       case "gap": {
-        const aFairOver = a.prop.edge ? a.prop.edge.fairProbOver : a.prop.fdOddsNoVig.over;
-        const aFairUnder = a.prop.edge ? a.prop.edge.fairProbUnder : a.prop.fdOddsNoVig.under;
-        const bFairOver = b.prop.edge ? b.prop.edge.fairProbOver : b.prop.fdOddsNoVig.over;
-        const bFairUnder = b.prop.edge ? b.prop.edge.fairProbUnder : b.prop.fdOddsNoVig.under;
+        const aFairOver = a.prop.edge
+          ? a.prop.edge.fairProbOver
+          : a.prop.fdOddsNoVig.over;
+        const aFairUnder = a.prop.edge
+          ? a.prop.edge.fairProbUnder
+          : a.prop.fdOddsNoVig.under;
+        const bFairOver = b.prop.edge
+          ? b.prop.edge.fairProbOver
+          : b.prop.fdOddsNoVig.over;
+        const bFairUnder = b.prop.edge
+          ? b.prop.edge.fairProbUnder
+          : b.prop.fdOddsNoVig.under;
         aVal = isOver
           ? aFairOver - a.prop.siaOddsNoVig.over
           : aFairUnder - a.prop.siaOddsNoVig.under;
@@ -226,9 +264,34 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
           : bFairUnder - b.prop.siaOddsNoVig.under;
         break;
       }
-      case "fdNoVig":
-        aVal = isOver ? a.prop.fdOddsNoVig.over : a.prop.fdOddsNoVig.under;
-        bVal = isOver ? b.prop.fdOddsNoVig.over : b.prop.fdOddsNoVig.under;
+      case "fdNoVig": {
+        // In different mode, sort by fair value instead of raw FD no-vig
+        if (filters.lineMode === "different") {
+          const aFair = isOver
+            ? a.prop.edge
+              ? a.prop.edge.fairProbOver
+              : a.prop.fdOddsNoVig.over
+            : a.prop.edge
+              ? a.prop.edge.fairProbUnder
+              : a.prop.fdOddsNoVig.under;
+          const bFair = isOver
+            ? b.prop.edge
+              ? b.prop.edge.fairProbOver
+              : b.prop.fdOddsNoVig.over
+            : b.prop.edge
+              ? b.prop.edge.fairProbUnder
+              : b.prop.fdOddsNoVig.under;
+          aVal = aFair;
+          bVal = bFair;
+        } else {
+          aVal = isOver ? a.prop.fdOddsNoVig.over : a.prop.fdOddsNoVig.under;
+          bVal = isOver ? b.prop.fdOddsNoVig.over : b.prop.fdOddsNoVig.under;
+        }
+        break;
+      }
+      case "siaNoVig":
+        aVal = isOver ? a.prop.siaOddsNoVig.over : a.prop.siaOddsNoVig.under;
+        bVal = isOver ? b.prop.siaOddsNoVig.over : b.prop.siaOddsNoVig.under;
         break;
     }
 
@@ -237,14 +300,7 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     return 0;
   });
 
-  // Get all team names that are playing today
-  const teams = [
-    ...new Set(allProps.flatMap((row) => [row.homeTeam, row.awayTeam])),
-  ];
-
-  // get all prop types
-  const propTypes = [...new Set(allProps.map((row) => row.propType))];
-
+  // Infinite scroll
   const [visibleCount, setVisibleCount] = useState(12);
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -262,89 +318,111 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     );
 
     observer.observe(element);
-    // Since a new observer gets created whenever sorted.length changes, we must disconnect the current observer for it to not stack
     return () => observer.disconnect();
   }, [sorted.length]);
 
-  // Revert the visible count to the initial amount whenever filter changes so that filters can be quick
+  // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(12);
   }, [filters]);
 
-  return (
-    <div className="sm:max-w-400 sm:mx-auto sm:px-4">
-      {!hasFetched && fixtures.length > 0 ? (
-        <div className="flex justify-center py-20">
-          <div className="w-6 h-6 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
-        </div>
-      ) : allProps.length === 0 ? (
-        <div className="py-12">
-          <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
-            Props aren't available yet, they usually appear about an hour before tip-off.
-          </p>
-          {fixtures.length > 0 ? (
-            <>
-              <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
-                Today's Schedule
-              </p>
-              <div className="space-y-1.5">
-                {fixtures.map((f) => (
-                  <div
-                    key={f.fixture_id}
-                    className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 min-w-0 sm:flex sm:justify-between sm:items-center"
-                  >
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-300 font-medium truncate">
-                        {f.away_team}
-                      </span>
-                      <span className="text-zinc-600 text-xs shrink-0">@</span>
-                      <span className="text-zinc-300 font-medium truncate">
-                        {f.home_team}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-1.5 sm:mt-0 sm:font-semibold sm:bg-zinc-800/50 sm:px-2.5 sm:py-1 sm:rounded-lg sm:shrink-0 sm:ml-3">
-                      {new Date(f.start_date).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                      {" · "}
-                      {new Date(f.start_date).toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-zinc-600 text-sm text-center">
-              No games available right now. Check back later.
+  // ─── Loading / empty states (no sidebar needed) ───
+  if (!hasFetched && fixtures.length > 0) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="w-6 h-6 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (allProps.length === 0) {
+    return (
+      <div className="py-12 sm:max-w-400 sm:mx-auto sm:px-4">
+        <p className="text-center text-zinc-500 text-2xl mb-8 font-semibold">
+          Props aren&apos;t available yet, they usually appear about an hour
+          before tip-off.
+        </p>
+        {fixtures.length > 0 ? (
+          <>
+            <p className="text-sm font-semibold text-zinc-600 uppercase tracking-widest mb-3 px-1">
+              Today&apos;s Schedule
             </p>
-          )}
+            <div className="space-y-1.5">
+              {fixtures.map((f) => (
+                <div
+                  key={f.fixture_id}
+                  className="bg-[#13151b] border border-zinc-800/70 rounded-xl px-4 py-3.5 min-w-0 sm:flex sm:justify-between sm:items-center"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-zinc-300 font-medium truncate">
+                      {f.away_team}
+                    </span>
+                    <span className="text-zinc-600 text-xs shrink-0">@</span>
+                    <span className="text-zinc-300 font-medium truncate">
+                      {f.home_team}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-1.5 sm:mt-0 sm:font-semibold sm:bg-zinc-800/50 sm:px-2.5 sm:py-1 sm:rounded-lg sm:shrink-0 sm:ml-3">
+                    {new Date(f.start_date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {" · "}
+                    {new Date(f.start_date).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-zinc-600 text-sm text-center">
+            No games available right now. Check back later.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Main layout: sidebar + cards ───
+  return (
+    <div className="max-w-400 mx-auto lg:flex lg:h-[calc(100vh-56px)] sm:px-2">
+      {/* Desktop sidebar rendered here as flex sibling (lg+) */}
+      {/* Mobile button + drawer also rendered here but positioned via fixed/flow */}
+      <FilterSidebar
+        filters={filters}
+        onFilterChange={setFilters}
+        matchups={matchups}
+        propTypes={propTypes}
+      />
+
+      {/* Main content area */}
+      <div className="flex-1 lg:overflow-y-auto p-2 lg:p-4">
+        {filters.matchup && (
+          <p className="text-xl sm:text-3xl font-bold text-zinc-400 mb-10">
+            {filters.matchup}
+          </p>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+          {sorted.slice(0, visibleCount).map((row) => (
+            <OddsCard
+              key={`${row.fixtureId}-${row.player}-${row.propType}`}
+              row={row}
+            />
+          ))}
         </div>
-      ) : (
-        <>
-          <FilterSheet
-            filters={filters}
-            onFilterChange={setFilters}
-            teams={teams}
-            propTypes={propTypes}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            {sorted.slice(0, visibleCount).map((row) => (
-              <OddsCard
-                key={`${row.fixtureId}-${row.player}-${row.propType}`}
-                row={row}
-              />
-            ))}
-          </div>
-          {visibleCount < sorted.length && (
-            <div ref={loaderRef} className="h-10" />
-          )}
-        </>
-      )}
+        {sorted.length === 0 && (
+          <p className="text-center text-zinc-600 text-sm py-12">
+            No props match your current filters.
+          </p>
+        )}
+        {visibleCount < sorted.length && (
+          <div ref={loaderRef} className="h-10" />
+        )}
+      </div>
     </div>
   );
 }

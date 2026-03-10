@@ -114,11 +114,11 @@ export default async function PlayerPropsPage({
   const sameLine = playerProp.siaLine === playerProp.fdLine;
 
   return (
-    <main className="min-h-screen bg-zinc-900 text-zinc-300">
-      <div className="">
+    <main className="min-h-screen bg-zinc-900 text-zinc-300 max-w-400 mx-auto px-4 py-2">
+      <div>
         {/* Header */}
         <div className="pt-2 sm:p-5 mb-6">
-          <div className="grid grid-cols-[1fr_auto] gap-3 sm:gap-4 items-start">
+          <div className="grid grid-cols-[1fr_auto] gap-3 sm:gap-4 items-center">
             <div>
               <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                 {decodedPlayer}
@@ -165,7 +165,7 @@ export default async function PlayerPropsPage({
             </a>
           ))}
         </div>
-          
+
         <OddsComparison
           books={[
             {

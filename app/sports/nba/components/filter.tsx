@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Filters } from "./oddsBoard";
 
 export const PROP_LABELS: Record<string, string> = {
@@ -14,62 +14,129 @@ export const PROP_LABELS: Record<string, string> = {
   rebounds_assists: "R+A",
 };
 
-interface FilterSheetProps {
+interface FilterSidebarProps {
   filters: Filters;
   onFilterChange: (filters: Filters) => void;
-  teams: string[];
+  matchups: string[];
   propTypes: string[];
 }
 
-const DEFAULT_FILTERS: Filters = {
-  team: "",
-  propType: "",
-  minGap: 0,
+export const DEFAULT_FILTERS: Filters = {
+  lineMode: "same",
+  matchup: "",
+  propTypes: [],
   direction: "",
+  minGap: 0,
+  minSiaNoVig: 0,
   minFdNoVig: 0,
+  minLineDiff: 0,
   sortBy: "",
   sortDir: "desc",
 };
 
-export default function FilterSheet({
+export default function FilterSidebar({
   filters,
   onFilterChange,
-  teams,
+  matchups,
   propTypes,
-}: FilterSheetProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [teamOpen, setTeamOpen] = useState(false);
-  const [touchStart, setTouchStart] = useState(0);
+}: FilterSidebarProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [matchupOpen, setMatchupOpen] = useState(false);
+  const matchupRef = useRef<HTMLDivElement>(null);
 
-  function handleTouchStart(e: React.TouchEvent) {
-    setTouchStart(e.touches[0].clientY);
+  const isSame = filters.lineMode === "same";
+
+  function update(partial: Partial<Filters>) {
+    onFilterChange({ ...filters, ...partial });
   }
 
-  function handleTouchEnd(e: React.TouchEvent) {
-    const diff = e.changedTouches[0].clientY - touchStart;
-    if (diff > 10) setIsOpen(false);
+  function toggleProp(key: string) {
+    const current = filters.propTypes;
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : [...current, key];
+    update({ propTypes: next });
+  }
+
+  function handleSort(key: "" | "gap" | "fdNoVig" | "siaNoVig") {
+    if (filters.sortBy === key && key !== "") {
+      update({ sortDir: filters.sortDir === "desc" ? "asc" : "desc" });
+    } else {
+      update({ sortBy: key, sortDir: "desc" });
+    }
   }
 
   const activeCount = [
-    filters.team,
-    filters.propType,
+    filters.matchup,
+    filters.propTypes.length > 0,
     filters.direction,
     filters.minGap,
+    filters.minSiaNoVig,
     filters.minFdNoVig,
+    filters.minLineDiff,
   ].filter(Boolean).length;
 
-  const filterControls = (
-    <>
-      {/* Team */}
-      <div className="relative w-full sm:w-auto">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
-          Team
-        </label>
+  /* ─── Shared filter content ─── */
+  const filterContent = (
+    <div className="flex flex-col gap-5">
+      {/* Line Mode Toggle */}
+      <div>
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+          Lines
+        </span>
+        <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800/60">
+          {(["same", "different"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => update({ lineMode: m, minLineDiff: 0 })}
+              className={`flex-1 py-2 text-xs font-bold rounded-md transition-all duration-200 ${
+                filters.lineMode === m
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "text-zinc-500 hover:text-zinc-400"
+              }`}
+            >
+              {m === "same" ? "Same" : "Different"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Min Line Diff — only in Different mode */}
+      {!isSame && (
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+              Line Diff ≥
+            </span>
+            <span className="text-xs font-mono font-bold text-amber-400">
+              {filters.minLineDiff > 0 ? filters.minLineDiff.toFixed(1) : "Any"}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="5"
+            step="0.5"
+            value={filters.minLineDiff}
+            onChange={(e) =>
+              update({ minLineDiff: parseFloat(e.target.value) })
+            }
+            className="w-full accent-amber-500 h-1"
+          />
+          <p className="text-[9px] text-zinc-700 mt-1">SIA line - FD line</p>
+        </div>
+      )}
+
+      {/* Matchup */}
+      <div ref={matchupRef} className="relative">
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+          Matchup
+        </span>
         <button
-          onClick={() => setTeamOpen(!teamOpen)}
-          className="w-full sm:w-auto sm:max-w-40 flex justify-between sm:justify-start items-center gap-2 bg-white/3 border border-zinc-800 rounded-xl sm:rounded-lg px-3 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-zinc-300 sm:text-zinc-400 hover:text-zinc-300 transition-colors"
+          onClick={() => setMatchupOpen(!matchupOpen)}
+          className="w-full flex justify-between items-center gap-2 bg-zinc-900 border border-zinc-800/60 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-300 hover:text-zinc-200 transition-colors"
         >
-          <span className="truncate">{filters.team || "All Teams"}</span>
+          <span className="truncate">{filters.matchup || "All Matchups"}</span>
           <svg
             width="10"
             height="6"
@@ -78,316 +145,292 @@ export default function FilterSheet({
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
-            className="text-zinc-500"
+            className={`text-zinc-500 transition-transform duration-200 ${matchupOpen ? "rotate-180" : ""}`}
           >
             <path d="M1 1L5 5L9 1" />
           </svg>
         </button>
-        {teamOpen && (
-          <div className="absolute z-20 mt-1 w-full sm:w-48 bg-[#111318] border border-zinc-700 rounded-xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
+        {matchupOpen && (
+          <div className="absolute z-20 mt-1 w-full bg-[#111318] border border-zinc-700 rounded-xl overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
             <button
               onClick={() => {
-                onFilterChange({ ...filters, team: "" });
-                setTeamOpen(false);
+                update({ matchup: "" });
+                setMatchupOpen(false);
               }}
-              className={`w-full text-left px-3 py-2.5 sm:py-2 text-sm sm:text-xs transition-colors ${
-                filters.team === ""
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                filters.matchup === ""
                   ? "text-emerald-400 bg-emerald-500/10"
                   : "text-zinc-400 hover:bg-white/3"
               }`}
             >
-              All Teams
+              All Matchups
             </button>
-            {teams.map((t) => (
+            {matchups.map((m) => (
               <button
-                key={t}
+                key={m}
                 onClick={() => {
-                  onFilterChange({ ...filters, team: t });
-                  setTeamOpen(false);
+                  update({ matchup: m });
+                  setMatchupOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2.5 sm:py-2 text-sm sm:text-xs transition-colors ${
-                  filters.team === t
+                className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                  filters.matchup === m
                     ? "text-emerald-400 bg-emerald-500/10"
                     : "text-zinc-400 hover:bg-white/3"
                 }`}
               >
-                {t}
+                {m}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Divider — desktop only */}
-      <div className="hidden sm:block w-px h-6 bg-zinc-800" />
-      <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-widest text-zinc-600 self-center">
-        Prop:
-      </span>
-      {/* Prop Type */}
-      <div className="w-full sm:w-auto">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
-          Prop Type
-        </label>
+      {/* Prop Type — multi-select */}
+      <div>
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
+          Props
+        </span>
         <div className="flex flex-wrap gap-1.5">
           <button
-            onClick={() => onFilterChange({ ...filters, propType: "" })}
-            className={`px-3.5 sm:px-2.5 py-1.5 rounded-full sm:rounded-lg text-xs sm:text-[11px] font-semibold transition-colors ${
-              filters.propType === ""
-                ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
+            onClick={() => update({ propTypes: [] })}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+              filters.propTypes.length === 0
+                ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
+                : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
             }`}
           >
             All
           </button>
-          {propTypes.map((p) => (
-            <button
-              key={p}
-              onClick={() => onFilterChange({ ...filters, propType: p })}
-              className={`px-3.5 sm:px-2.5 py-1.5 rounded-full sm:rounded-lg text-xs sm:text-[11px] font-semibold transition-colors capitalize ${
-                filters.propType === p
-                  ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                  : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {PROP_LABELS[p] ?? p}
-            </button>
-          ))}
+          {propTypes.map((p) => {
+            const active = filters.propTypes.includes(p);
+            return (
+              <button
+                key={p}
+                onClick={() => toggleProp(p)}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+                  active
+                    ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
+                    : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
+                }`}
+              >
+                {PROP_LABELS[p] ?? p}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Divider — desktop only */}
-      <div className="hidden sm:block w-px h-6 bg-zinc-800" />
-      <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-widest text-zinc-600 self-center">
-        Direction:
-      </span>
       {/* Direction */}
-      <div className="w-full sm:w-auto">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
+      <div>
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Direction
-        </label>
+        </span>
         <div className="flex gap-1.5">
-          {(["", "over", "under"] as const).map((d) => (
+          {[
+            { key: "" as const, label: "Both" },
+            { key: "over" as const, label: "Over" },
+            { key: "under" as const, label: "Under" },
+          ].map((d) => (
             <button
-              key={d}
-              onClick={() => onFilterChange({ ...filters, direction: d })}
-              className={`flex-1 sm:flex-none sm:px-2.5 py-2 sm:py-1.5 rounded-xl sm:rounded-lg text-xs sm:text-[11px] font-semibold transition-colors ${
-                filters.direction === d
-                  ? d === "over"
-                    ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                    : d === "under"
+              key={d.key}
+              onClick={() => update({ direction: d.key })}
+              className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+                filters.direction === d.key
+                  ? d.key === "over"
+                    ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
+                    : d.key === "under"
                       ? "bg-red-500/10 ring-1 ring-red-500/30 text-red-400"
-                      : "bg-zinc-700/50 ring-1 ring-zinc-600/30 text-zinc-200"
-                  : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                      : "bg-zinc-700/40 ring-1 ring-zinc-600/30 text-zinc-200"
+                  : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
               }`}
             >
-              {d === "" ? "Both" : d === "over" ? "Over" : "Under"}
+              {d.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Divider — desktop only */}
-      <div className="hidden sm:block w-px h-6 bg-zinc-800" />
+      <div className="h-px bg-zinc-800/60" />
 
       {/* Min Gap */}
-      <div className="w-full sm:w-auto">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
-          Minimum Gap %
-        </label>
-        <div className="flex items-center gap-2 sm:gap-2">
-          {/* Slider on mobile, number input on desktop */}
-          <input
-            type="range"
-            min="0"
-            max="10"
-            step="0.5"
-            value={filters.minGap}
-            onChange={(e) =>
-              onFilterChange({
-                ...filters,
-                minGap: parseFloat(e.target.value),
-              })
-            }
-            className="flex-1 accent-emerald-500 h-1 sm:hidden"
-          />
-          <span className="hidden sm:inline text-[11px] text-zinc-500 whitespace-nowrap font-semibold uppercase">
-            Gap ≥
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+            Min Gap
           </span>
-          <input
-            type="number"
-            min="0"
-            max="10"
-            step="0.5"
-            value={filters.minGap || ""}
-            onChange={(e) =>
-              onFilterChange({
-                ...filters,
-                minGap: parseFloat(e.target.value) || 0,
-              })
-            }
-            className="hidden sm:block w-14 bg-white/3 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-emerald-400 font-mono text-center focus:outline-none focus:border-emerald-500/30"
-            placeholder="0"
-          />
-          <span className="text-sm sm:text-[11px] font-bold sm:font-normal text-emerald-400 sm:text-zinc-500 tabular-nums w-12 sm:w-auto text-right font-mono">
-            <span className="sm:hidden">{filters.minGap.toFixed(1)}%</span>
-            <span className="hidden sm:inline">%</span>
+          <span className="text-xs font-mono font-bold text-emerald-400">
+            {filters.minGap > 0 ? `${filters.minGap.toFixed(1)}%` : "Any"}
           </span>
         </div>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          step="0.5"
+          value={filters.minGap}
+          onChange={(e) => update({ minGap: parseFloat(e.target.value) })}
+          className="w-full accent-emerald-500 h-1"
+        />
+        <p className="text-[9px] text-zinc-700 mt-1">
+          {isSame ? "FD no-vig − SIA no-vig" : "Fair value − SIA no-vig"}
+        </p>
       </div>
 
-      {/* Min FD No-Vig % — only when direction is set */}
+      {/* SIA + FD/Fair thresholds — only when direction is set */}
       {filters.direction && (
-        <>
-          <div className="hidden sm:block w-px h-6 bg-zinc-800" />
-          <div className="w-full sm:w-auto">
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
-              Min FD No-Vig {filters.direction === "over" ? "Over" : "Under"} %
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-[11px] text-zinc-500 whitespace-nowrap font-semibold uppercase">
-                FD {filters.direction === "over" ? "Over" : "Under"} ≥
-              </span>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <span className="text-[10px] text-zinc-500 font-semibold block mb-1.5">
+              SIA ≥
+            </span>
+            <div className="relative">
               <input
                 type="number"
-                value={filters.minFdNoVig || ""}
+                min="0"
+                max="100"
+                step="1"
+                value={filters.minSiaNoVig || ""}
                 onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    minFdNoVig: parseFloat(e.target.value) || 0,
-                  })
+                  update({ minSiaNoVig: parseFloat(e.target.value) || 0 })
                 }
                 placeholder="0"
-                className="w-full sm:w-14 bg-white/3 border border-zinc-800 rounded-xl sm:rounded-lg px-3 sm:px-2 py-2.5 sm:py-1.5 text-sm sm:text-xs text-zinc-300 sm:text-blue-400 font-mono placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/30 sm:text-center"
+                className="w-full bg-zinc-900 border border-zinc-800/60 rounded-lg px-2.5 py-2 text-xs font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/30"
               />
-              <span className="hidden sm:inline text-[11px] text-zinc-500 ">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600">
                 %
               </span>
             </div>
           </div>
-        </>
+          <div className="flex-1">
+            <span className="text-[10px] text-zinc-500 font-semibold block mb-1.5">
+              {isSame ? "FD ≥" : "Fair ≥"}
+            </span>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={filters.minFdNoVig || ""}
+                onChange={(e) =>
+                  update({ minFdNoVig: parseFloat(e.target.value) || 0 })
+                }
+                placeholder="0"
+                className="w-full bg-zinc-900 border border-zinc-800/60 rounded-lg px-2.5 py-2 text-xs font-mono text-blue-400 placeholder:text-zinc-700 focus:outline-none focus:border-blue-500/30"
+              />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-600">
+                %
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Divider — desktop only */}
-      <div className="hidden sm:block w-px h-6 bg-zinc-800" />
+      <div className="h-px bg-zinc-800/60" />
 
       {/* Sort */}
-      <div className="w-full sm:w-auto">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 sm:hidden">
+      <div>
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-2 block">
           Sort By
-        </label>
-        <div className="flex gap-1.5 sm:items-center">
-          <span className="hidden sm:inline text-[11px] text-zinc-500 font-semibold uppercase">
-            Sort:
-          </span>
-          {(["", "gap", "fdNoVig"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => onFilterChange({ ...filters, sortBy: s })}
-              className={`flex-1 sm:flex-none py-2 sm:py-1.5 sm:px-2 rounded-xl sm:rounded-lg text-xs sm:text-[11px] font-semibold transition-colors ${
-                filters.sortBy === s
-                  ? "bg-emerald-500/10 ring-1 ring-emerald-500/30 text-emerald-400"
-                  : "bg-white/3 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {s === "" ? "None" : s === "gap" ? "Gap" : "Fanduel %"}
-            </button>
-          ))}
-          {filters.sortBy && (
-            <button
-              onClick={() =>
-                onFilterChange({
-                  ...filters,
-                  sortDir: filters.sortDir === "desc" ? "asc" : "desc",
-                })
-              }
-              className="sm:flex-none py-2 sm:py-1.5 sm:px-2 rounded-xl sm:rounded-lg text-xs sm:text-[11px] font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              {filters.sortDir === "desc" ? "↓ Highest" : "↑ Lowest"}
-            </button>
-          )}
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { key: "gap" as const, label: "Gap" },
+            { key: "fdNoVig" as const, label: isSame ? "FD %" : "Fair %" },
+            { key: "siaNoVig" as const, label: "SIA %" },
+          ].map((s) => {
+            const active = filters.sortBy === s.key;
+            return (
+              <button
+                key={s.key}
+                onClick={() => handleSort(s.key)}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all duration-150 ${
+                  active
+                    ? "bg-emerald-500/15 ring-1 ring-emerald-500/30 text-emerald-400"
+                    : "bg-zinc-900 border border-zinc-800/60 text-zinc-500 hover:text-zinc-400"
+                }`}
+              >
+                {s.label}
+                {active && (
+                  <span className="text-[10px]">
+                    {filters.sortDir === "desc" ? "↓" : "↑"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
     <>
-      {/* Mobile: trigger button + bottom sheet */}
+      {/* ─── Desktop: always-visible sidebar (lg+) ─── */}
+      <div className="hidden lg:block w-65 shrink-0 h-full bg-zinc-900 border-r border-zinc-800/60">
+        <div className="p-4 pt-4 overflow-y-auto h-full pb-8">
+          {filterContent}
+        </div>
+      </div>
+
+      {/* ─── Mobile: floating funnel FAB (bottom-right) ─── */}
       <button
-        onClick={() => setIsOpen(true)}
-        className="sm:hidden w-full flex items-center gap-2.5 px-4 py-3 bg-[#13151b] border border-zinc-800/70 rounded-xl mb-4"
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed bottom-5 right-5 z-40 w-12 h-12 flex items-center justify-center rounded-full border border-zinc-700/60 bg-zinc-800/90 backdrop-blur-md shadow-lg shadow-black/40 text-zinc-400 hover:text-emerald-400 transition-colors"
       >
+        {/* Funnel icon */}
         <svg
-          width="16"
-          height="16"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
-          className="text-zinc-500"
+          strokeLinejoin="round"
         >
-          <line x1="4" y1="6" x2="20" y2="6" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-          <line x1="11" y1="18" x2="13" y2="18" />
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
-        <span className="text-sm font-semibold text-zinc-400">Filters</span>
         {activeCount > 0 && (
-          <span className="ml-auto text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-[10px] font-bold text-white flex items-center justify-center">
             {activeCount}
           </span>
         )}
       </button>
 
-      {isOpen && (
-        <div
-          className="sm:hidden fixed inset-0 z-50 flex items-end justify-center"
-          onClick={() => setIsOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div
-            className="relative w-full max-w-md bg-[#111318] border-t border-zinc-800/60 rounded-t-2xl max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <div
-              className="flex justify-center pt-3 pb-2 cursor-pointer"
-              onClick={() => setIsOpen(false)}
-            >
-              <div className="w-9 h-1 rounded-full bg-zinc-700" />
-            </div>
-            <div className="px-5 pb-6">
-              <div className="flex justify-between items-center mb-5">
-                <span className="text-base font-bold text-zinc-100">
-                  Filters
-                </span>
-                <button
-                  onClick={() => onFilterChange(DEFAULT_FILTERS)}
-                  className="text-xs font-semibold text-zinc-500 hover:text-red-400 transition-colors"
-                >
-                  Reset all
-                </button>
-              </div>
-              <div className="flex flex-col gap-5">{filterControls}</div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-white mt-5"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #059669 0%, #0d9488 100%)",
-                }}
-              >
-                Show Results
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─── Mobile: left drawer overlay ─── */}
+      <div
+        className={`lg:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
+          mobileOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileOpen(false)}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-      {/* Desktop: inline filter bar */}
-      <div className="hidden sm:flex items-center gap-3 flex-wrap mb-4 p-3 border-b border-zinc-800/60 pb-4">
-        {filterControls}
+        {/* Drawer */}
+        <div
+          className={`absolute top-0 left-0 h-full w-72 max-w-[80vw] bg-zinc-900 border-r border-zinc-800/60 overflow-y-auto transition-transform duration-300 ease-out ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex justify-between items-center p-4 pb-2 border-b border-zinc-800/60 mb-2">
+            <span className="text-sm font-bold text-zinc-100">Filters</span>
+            <button
+              onClick={() => onFilterChange(DEFAULT_FILTERS)}
+              className="text-[11px] font-semibold text-zinc-500 hover:text-red-400 transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* Filter content */}
+          <div className="p-4 pt-2 pb-8">{filterContent}</div>
+        </div>
       </div>
     </>
   );
