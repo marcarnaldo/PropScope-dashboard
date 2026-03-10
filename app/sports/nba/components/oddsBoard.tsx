@@ -141,8 +141,8 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
 
     if (!oddsData) return;
 
-    for (const [player, props] of Object.entries(oddsData.props)) {
-      for (const [propType, prop] of Object.entries(props)) {
+    for (const [player, props] of Object.entries(oddsData.props ?? {})) {
+      for (const [propType, prop] of Object.entries(props ?? {})) {
         allProps.push({
           player,
           propType,
@@ -375,7 +375,9 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
           <div className="relative mb-6">
             <div
               className="absolute inset-0 rounded-full blur-2xl opacity-20"
-              style={{ background: "radial-gradient(circle, #10b981, transparent)" }}
+              style={{
+                background: "radial-gradient(circle, #10b981, transparent)",
+              }}
             />
             <div className="relative w-16 h-16 rounded-2xl border border-zinc-700/50 bg-zinc-800/60 flex items-center justify-center text-zinc-500">
               <svg
