@@ -71,6 +71,12 @@ export default function Chart({
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
+            tickFormatter={(value) =>
+              new Date(value).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })
+            }
           />
           <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
           <Tooltip

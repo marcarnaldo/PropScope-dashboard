@@ -128,7 +128,10 @@ function PropGrid({ prop }: { prop: NormalizedProp }) {
       {/* Fair row — only when SIA and FD are on different lines */}
       {hasDifferentLines && edge && (
         <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-1.5">
-          <span className="text-sm text-zinc-600 font-semibold self-center">Fair</span>
+          <span className="flex flex-col leading-tight self-center">
+              <span className="text-sm text-zinc-600 font-semibold">Fair</span>
+              <span className="text-[9px] text-zinc-700 uppercase tracking-wide">{edge.method}</span>
+            </span>
           <span className="text-center text-base font-bold text-blue-400/60 tabular-nums font-mono">
             {prop.siaLine}
           </span>

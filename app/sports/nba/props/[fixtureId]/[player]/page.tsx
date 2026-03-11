@@ -49,10 +49,7 @@ export default async function PlayerPropsPage({
       const p = od?.props?.[decodedPlayer]?.[prop];
       if (!p) return null;
       return {
-        time: new Date(snap.snapshot_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
+        time: snap.snapshot_time,
         siaOver: parseFloat((p.siaOddsNoVig.over * 100).toFixed(2)),
         siaUnder: parseFloat((p.siaOddsNoVig.under * 100).toFixed(2)),
         fdOver: parseFloat((p.fdOddsNoVig.over * 100).toFixed(2)),
@@ -71,10 +68,7 @@ export default async function PlayerPropsPage({
       const p = od?.props?.[decodedPlayer]?.[prop];
       if (!p) return null;
       return {
-        time: new Date(snap.snapshot_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
+        time: snap.snapshot_time,
         siaLine: p.siaLine,
         fdLine: p.fdLine,
       };
@@ -91,10 +85,7 @@ export default async function PlayerPropsPage({
       const p = od?.props?.[decodedPlayer]?.[prop];
       if (!p) return null;
       return {
-        time: new Date(snap.snapshot_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
+        time: snap.snapshot_time,
         overGap: parseFloat(
           ((p.fdOddsNoVig.over - p.siaOddsNoVig.over) * 100).toFixed(2),
         ),

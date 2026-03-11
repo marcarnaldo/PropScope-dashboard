@@ -122,7 +122,12 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         return next;
       });
       setHasFetched(true);
-      if (isSSEUpdate) setLastUpdated(new Date());
+      const latestTime = results
+        .map((r) => r.latestOdds?.snapshot_time)
+        .filter(Boolean)
+        .sort()
+        .at(-1);
+      if (latestTime) setLastUpdated(new Date(latestTime));
     }
 
     fetchOdds();
