@@ -68,15 +68,23 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
     if (typeof window === "undefined") return new Set();
     try {
       const saved = JSON.parse(localStorage.getItem("propscope-bets") || "[]");
-      return new Set(saved);
+      const validIds = new Set(fixtures.map((f) => String(f.fixture_id)));
+      const filtered = (saved as string[]).filter((key) =>
+        validIds.has(key.split("-")[0]),
+      );
+      return new Set(filtered);
     } catch {
       return new Set();
     }
   });
 
   useEffect(() => {
-    localStorage.setItem("propscope-bets", JSON.stringify([...bets]));
-  }, [bets]);
+    const validIds = new Set(fixtures.map((f) => String(f.fixture_id)));
+    const currentBets = [...bets].filter((key) =>
+      validIds.has(key.split("-")[0]),
+    );
+    localStorage.setItem("propscope-bets", JSON.stringify(currentBets));
+  }, [bets, fixtures]);
 
   function toggleBet(key: string) {
     setBets((prev) => {
@@ -487,7 +495,9 @@ export default function NbaOddsSpace({ fixtures }: { fixtures: Fixture[] }) {
         onFilterChange={setFilters}
         matchups={matchups}
         propTypes={propTypes}
-        betCount={bets.size}
+        betCount={allProps.filter((row) =>
+          bets.has(`${row.fixtureId}-${row.player}-${row.propType}`),
+        ).length}
       />
 
       {/* Main content area */}
