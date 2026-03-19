@@ -130,7 +130,6 @@ function PropGrid({ prop }: { prop: NormalizedProp }) {
         <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-1.5">
           <span className="flex flex-col leading-tight self-center">
               <span className="text-sm text-zinc-600 font-semibold">Fair</span>
-              <span className="text-[9px] text-zinc-700 uppercase tracking-wide">{edge.method}</span>
             </span>
           <span className="text-center text-base font-bold text-blue-400/60 tabular-nums font-mono">
             {prop.siaLine}
@@ -148,6 +147,7 @@ function PropGrid({ prop }: { prop: NormalizedProp }) {
         </div>
       )}
 
+      {/* Gap row */}
       <div className="grid grid-cols-[36px_0.7fr_1fr_1fr] py-2 border-t border-white/4">
         <span className="text-sm text-zinc-700 font-semibold self-center">Gap</span>
         <div />
@@ -158,6 +158,17 @@ function PropGrid({ prop }: { prop: NormalizedProp }) {
           <GapPill gap={underGap} isBest={bestSide === "under"} />
         </div>
       </div>
-    </div>
+
+      {hasDifferentLines && edge && (
+        <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-white/3">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-700 shrink-0">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <span className="text-sm text-zinc-700">
+            Fair values via <span className="text-yellow-400 font-semibold">{edge.method}</span>
+          </span>
+        </div>
+      )}
+    </div>    
   );
 }

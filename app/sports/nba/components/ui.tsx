@@ -2,9 +2,7 @@
 
 import React from "react";
 
-// ─── Chip (active/inactive toggle style) ───────────────────────────────────
-// Shared class logic so button and link variants stay in sync
-
+// Chip (active/inactive toggle style)
 export function chipClass(active: boolean): string {
   return `px-2.5 py-1.5 rounded-lg text-sm font-bold transition-all duration-150 ${
     active
@@ -56,10 +54,7 @@ export function ChipLink({
   );
 }
 
-// ─── PropTypeBadge ─────────────────────────────────────────────────────────
-// The rounded label box shown in the card header and player page header.
-// Pass className to override padding/sizing for different contexts.
-
+// PropTypeBadge 
 export function PropTypeBadge({
   label,
   className,
